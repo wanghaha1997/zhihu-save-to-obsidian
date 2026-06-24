@@ -294,6 +294,10 @@ curl -X POST http://127.0.0.1:3721/save \
 
 ![Chrome 工具栏中的扩展](assets/screenshots/extension-toolbar.png)
 
+### Obsidian 保存结果
+
+![Obsidian 中保存的知乎 Markdown 笔记](assets/screenshots/obsidian-note-result.png)
+
 ## 发布前检查清单
 
 - [ ] 没有提交个人本地的 `config.json`
