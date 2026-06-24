@@ -286,13 +286,13 @@ curl -X POST http://127.0.0.1:3721/save \
 
 ## 截图
 
-截图可以放在 `assets/screenshots/` 目录。
+### 扩展弹窗
 
-建议补充：
+![扩展弹窗：选择要保存的知乎回答](assets/screenshots/popup-select-answer.png)
 
-- Chrome 扩展弹窗截图
-- 保存成功后的 Obsidian Markdown 截图
-- Chrome 加载扩展页面截图
+### Chrome 工具栏
+
+![Chrome 工具栏中的扩展](assets/screenshots/extension-toolbar.png)
 
 ## 发布前检查清单
 
@@ -304,7 +304,7 @@ curl -X POST http://127.0.0.1:3721/save \
 - [ ] Chrome 可以加载 `extension` 文件夹
 - [ ] 保存知乎专栏文章成功
 - [ ] 保存知乎问题回答成功
-- [ ] README 截图已补充
+- [x] README 截图已补充
 
 ## 免责声明
 
