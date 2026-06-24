@@ -1,10 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import cors from "cors";
 import express from "express";
 import TurndownService from "turndown";
+
+export {
+  buildMarkdown
+};
 
 const app = express();
 const HOST = "127.0.0.1";
@@ -81,9 +85,11 @@ app.use((error, req, res, next) => {
   });
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`知乎保存到 Obsidian 服务已启动：http://${HOST}:${PORT}`);
-});
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  app.listen(PORT, HOST, () => {
+    console.log(`知乎保存到 Obsidian 服务已启动：http://${HOST}:${PORT}`);
+  });
+}
 
 async function readConfig() {
   let rawConfig;
@@ -164,10 +170,11 @@ function buildMarkdown(payload) {
   const markdownBody = turndownService.turndown(payload.html).trim();
   const savedDate = payload.savedAt.slice(0, 10);
   const title = escapeYamlValue(payload.title);
-  const author = escapeYamlValue(payload.author);
+  const authorLink = createObsidianLink(payload.author);
+  const author = escapeYamlValue(authorLink);
   const url = escapeYamlValue(payload.url);
 
-  return `---\ntitle: ${title}\nauthor: ${author}\nsource: 知乎\nurl: ${url}\nsaved_at: ${savedDate}\ntags:\n  - 知乎\n  - 待整理\n---\n\n# ${payload.title}\n\n> 作者：${payload.author}\n> 原文：${payload.url}\n\n${markdownBody}\n`;
+  return `---\ntitle: ${title}\nauthor: ${author}\nsource: 知乎\nurl: ${url}\nsaved_at: ${savedDate}\ntags:\n  - 知乎\n  - 待整理\n---\n\n# ${payload.title}\n\n> 作者：${authorLink}\n> 原文：${payload.url}\n\n${markdownBody}\n`;
 }
 
 async function getAvailableFilePath(targetDir, title) {
@@ -213,6 +220,19 @@ function parseSavedAt(value) {
 
 function escapeYamlValue(value) {
   return JSON.stringify(value);
+}
+
+function createObsidianLink(value) {
+  const linkTarget = cleanObsidianLinkTarget(value);
+  return `[[${linkTarget || "未知作者"}]]`;
+}
+
+function cleanObsidianLinkTarget(value) {
+  return cleanText(value)
+    .replace(/^\[\[/, "")
+    .replace(/\]\]$/, "")
+    .replace(/[#[\]^|]/g, "")
+    .trim();
 }
 
 function userError(message) {

@@ -13,7 +13,7 @@
   "type": "module",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node tests/content-extraction.test.mjs"
+    "test": "node tests/content-extraction.test.mjs && node tests/markdown-output.test.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
