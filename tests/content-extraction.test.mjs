@@ -11,6 +11,7 @@ await testZhuanlanArticle();
 await testQuestionAnswer();
 await testMultipleQuestionAnswers();
 await testNestedRichTextIsNotDuplicated();
+await testCaixinArticle();
 console.log("content extraction tests passed");
 
 async function testZhuanlanArticle() {
@@ -119,6 +120,31 @@ async function testNestedRichTextIsNotDuplicated() {
   assertEqual(data.candidates.length, 2, "嵌套 RichText 不应造成候选重复");
   assertEqual(data.candidates[0].author, "答主 A", "去重后第一个候选作者错误");
   assertEqual(data.candidates[1].author, "答主 B", "去重后第二个候选作者错误");
+}
+
+async function testCaixinArticle() {
+  const data = await extractFromHtml(`<!doctype html>
+    <html>
+      <head>
+        <title>如何解决供强需弱？学者称收入分配或比宏观政策更重要_经济频道_财新网</title>
+        <meta property="og:title" content="如何解决供强需弱？学者称收入分配或比宏观政策更重要_经济频道_财新网">
+      </head>
+      <body>
+        <h1>如何解决供强需弱？学者称收入分配或比宏观政策更重要</h1>
+        <div class="article-info">2026-06-24 19:58:24来源：财新网 作者：于海荣责任编辑：霍侃</div>
+        <div id="Main_Content_Val">
+          <p>文｜财新 于海荣</p>
+          <p>供强需弱是根源于中国的增长模式和制度逻辑的结构性矛盾。</p>
+          <p>从未来角度讲，讨论收入分配政策比讨论经济增长政策更为关键和重要。</p>
+        </div>
+      </body>
+    </html>`, "https://economy.caixin.com/2026-06-24/102457132.html");
+
+  assertEqual(data.source, "caixin", "财新 source 提取失败");
+  assertEqual(data.title, "如何解决供强需弱？学者称收入分配或比宏观政策更重要", "财新标题提取失败");
+  assertEqual(data.author, "于海荣", "财新作者提取失败");
+  assertIncludes(data.html, "供强需弱是根源于中国", "财新正文提取失败");
+  assertEqual(data.candidates.length, 1, "财新候选数量错误");
 }
 
 async function extractFromHtml(html, url) {

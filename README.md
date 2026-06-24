@@ -1,10 +1,10 @@
-# 知乎保存到 Obsidian
+# 保存到 Obsidian
 
-本地优先的知乎 Markdown 保存工具。
+本地优先的中文内容 Markdown 保存工具。
 
-这个项目由一个 Chrome 扩展和一个本地 Node.js 服务组成，可以把当前浏览器里已经打开并渲染完成的知乎文章、回答或专栏页面保存为 Markdown 文件，并写入本地 Obsidian Vault。
+这个项目由一个 Chrome 扩展和一个本地 Node.js 服务组成，可以把当前浏览器里已经打开并渲染完成的知乎文章、回答、专栏页面，以及财新文章页面保存为 Markdown 文件，并写入本地 Obsidian Vault。
 
-> English: Save rendered Zhihu articles and answers to a local Obsidian vault as Markdown.
+> English: Save rendered Chinese web articles and answers to a local Obsidian vault as Markdown.
 
 ## 特点
 
@@ -14,15 +14,16 @@
 - 不调用知乎内部接口
 - 不上传文章内容、密码、Token 或 API Key
 - 支持知乎问题回答页和知乎专栏文章页
+- 试验支持财新文章页
 - 问题页支持从多个答主回答中选择其中一个保存
 - 自动转换为 Obsidian 友好的 Markdown
 - 文件重名时自动保留已有文件，生成新文件名
 
 ## 适合谁使用
 
-这个项目适合希望把知乎内容整理到 Obsidian 的用户，尤其适合：
+这个项目适合希望把中文网页内容整理到 Obsidian 的用户，尤其适合：
 
-- 想把知乎文章或回答保存成 Markdown
+- 想把知乎文章、知乎回答或财新文章保存成 Markdown
 - 想保留标题、作者、原文链接和正文
 - 不想把内容发送到第三方服务
 - 能接受在本机运行一个轻量 Node.js 服务
@@ -30,7 +31,7 @@
 ## 工作方式
 
 ```text
-Chrome 当前知乎页面
+Chrome 当前支持的网站页面
   -> Chrome 扩展读取已渲染的标题、作者、正文、链接
   -> POST http://127.0.0.1:3721/save
   -> 本地 Node.js 服务把 HTML 转成 Markdown
@@ -50,7 +51,7 @@ zhihu-save-to-obsidian/
     index.js               # 本地 Express 服务
   extension/
     manifest.json          # Chrome Extension Manifest V3
-    content.js             # 读取知乎页面内容
+    content.js             # 读取支持网站页面内容
     popup.html             # 扩展弹窗页面
     popup.js               # 弹窗交互和保存请求
   tests/
@@ -86,7 +87,7 @@ cp config.example.json config.json
 ```json
 {
   "vaultPath": "/Users/你的用户名/Documents/ObsidianVault",
-  "saveFolder": "知乎收藏"
+  "saveFolder": "网页收藏"
 }
 ```
 
@@ -97,7 +98,7 @@ cp config.example.json config.json
 ```json
 {
   "vaultPath": "/Users/ray/Documents/我的Obsidian",
-  "saveFolder": "知乎收藏"
+  "saveFolder": "网页收藏"
 }
 ```
 
@@ -118,7 +119,7 @@ npm start
 看到下面这行，表示服务已经启动：
 
 ```text
-知乎保存到 Obsidian 服务已启动：http://127.0.0.1:3721
+保存到 Obsidian 服务已启动：http://127.0.0.1:3721
 ```
 
 可以用下面命令检查服务是否正常：
@@ -142,12 +143,12 @@ curl http://127.0.0.1:3721/health
 你的项目目录/zhihu-save-to-obsidian/extension
 ```
 
-加载成功后，Chrome 工具栏会出现“知乎保存到 Obsidian”。如果没看到，可以点击工具栏右侧的拼图图标，把扩展固定出来。
+加载成功后，Chrome 工具栏会出现“保存到 Obsidian”。如果没看到，可以点击工具栏右侧的拼图图标，把扩展固定出来。
 
 ## 使用方法
 
 1. 确认 Node.js 服务仍在运行。
-2. 在 Chrome 打开一个知乎问题回答页，或者知乎专栏文章页。
+2. 在 Chrome 打开一个知乎问题回答页、知乎专栏文章页，或者财新文章页。
 3. 等页面正文加载完成。
 4. 点击 Chrome 工具栏里的扩展图标。
 5. 弹窗里会显示标题、作者、原文链接。
@@ -158,7 +159,7 @@ curl http://127.0.0.1:3721/health
 保存后的 Markdown 文件位置类似：
 
 ```text
-/Users/你的用户名/Documents/ObsidianVault/知乎收藏/文章标题.md
+/Users/你的用户名/Documents/ObsidianVault/网页收藏/文章标题.md
 ```
 
 如果同名文件已经存在，服务会自动保存成：
@@ -171,6 +172,7 @@ curl http://127.0.0.1:3721/health
 ## 生成的 Markdown 格式
 
 作者会保存为 Obsidian 内部链接，方便把同一作者的其他笔记关联起来。
+`source` 和标签会根据来源写成 `知乎` 或 `财新`。
 
 ```md
 ---
@@ -224,9 +226,9 @@ curl http://127.0.0.1:3721/health
 
 可能原因：
 
-- 当前页面不是知乎问题回答页或知乎专栏文章页。
+- 当前页面不是知乎问题回答页、知乎专栏文章页或财新文章页。
 - 页面正文还没加载完。
-- 知乎页面 DOM 结构变化，当前选择器没有匹配到正文。
+- 页面 DOM 结构变化，当前选择器没有匹配到正文。
 
 可以刷新页面，等正文出现后再点击扩展。
 
@@ -237,7 +239,7 @@ curl http://127.0.0.1:3721/health
 ```json
 {
   "vaultPath": "/Users/ray/Documents/ObsidianVault",
-  "saveFolder": "知乎收藏"
+  "saveFolder": "网页收藏"
 }
 ```
 
@@ -258,14 +260,14 @@ vaultPath/saveFolder/文章标题.md
 保存成功时会显示：
 
 ```text
-已保存：/Users/你的用户名/Documents/ObsidianVault/知乎收藏/文章标题.md
+已保存：/Users/你的用户名/Documents/ObsidianVault/网页收藏/文章标题.md
 ```
 
 保存失败时也会在这里显示错误原因，例如配置错误、正文为空、JSON 格式错误等。
 
 ## 开发自检
 
-检查 content script 对知乎专栏和回答 DOM 的提取逻辑：
+检查 content script 对知乎专栏、知乎回答和财新文章 DOM 的提取逻辑：
 
 ```bash
 npm test
@@ -312,11 +314,12 @@ curl -X POST http://127.0.0.1:3721/save \
 - Chrome 可以加载 `extension` 文件夹
 - 知乎专栏文章可以保存成功
 - 知乎问题回答可以保存成功
+- 财新文章可以保存成功
 - README 截图和说明仍然准确
 
 ## 免责声明
 
-本项目是个人开源工具，不隶属于知乎或 Obsidian，也不是知乎或 Obsidian 的官方产品。请只保存你有权保存和整理的内容，并遵守相关网站条款和版权要求。
+本项目是个人开源工具，不隶属于知乎、财新或 Obsidian，也不是知乎、财新或 Obsidian 的官方产品。请只保存你有权保存和整理的内容，并遵守相关网站条款和版权要求。本项目不会绕过登录、订阅或付费限制，只读取当前浏览器已经显示出来的内容。
 
 ## License
 

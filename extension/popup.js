@@ -21,7 +21,7 @@ async function init() {
       throw new Error("未找到当前标签页。");
     }
 
-    const data = await chrome.tabs.sendMessage(tab.id, { type: "EXTRACT_ZHIHU_PAGE" });
+    const data = await chrome.tabs.sendMessage(tab.id, { type: "EXTRACT_PAGE" });
     pageData = data;
     selectedCandidate = getInitialCandidate(data);
     renderPageData(data);
@@ -43,7 +43,7 @@ async function init() {
     authorElement.textContent = "未能读取";
     urlElement.textContent = "未能读取";
     saveButton.disabled = true;
-    setStatus(`读取失败：${error.message}\n请确认当前标签页是知乎问题回答页或知乎专栏文章页。`, "error");
+    setStatus(`读取失败：${error.message}\n请确认当前标签页是知乎问题回答页、知乎专栏文章页或财新文章页。`, "error");
   }
 }
 

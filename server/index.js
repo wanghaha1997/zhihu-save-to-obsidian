@@ -20,6 +20,10 @@ const turndownService = new TurndownService({
   headingStyle: "atx",
   codeBlockStyle: "fenced"
 });
+const SOURCES = {
+  zhihu: "知乎",
+  caixin: "财新"
+};
 
 app.disable("x-powered-by");
 app.use(cors({
@@ -87,7 +91,7 @@ app.use((error, req, res, next) => {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   app.listen(PORT, HOST, () => {
-    console.log(`知乎保存到 Obsidian 服务已启动：http://${HOST}:${PORT}`);
+    console.log(`保存到 Obsidian 服务已启动：http://${HOST}:${PORT}`);
   });
 }
 
@@ -144,8 +148,8 @@ function normalizePayload(body) {
   const html = typeof body.html === "string" ? body.html : "";
   const savedAt = parseSavedAt(body.savedAt);
 
-  if (body.source !== "zhihu") {
-    throw userError("source 必须是 zhihu");
+  if (!SOURCES[body.source]) {
+    throw userError(`source 必须是以下值之一：${Object.keys(SOURCES).join(", ")}`);
   }
 
   if (!url) {
@@ -157,7 +161,7 @@ function normalizePayload(body) {
   }
 
   return {
-    source: "zhihu",
+    source: body.source,
     title,
     author,
     url,
@@ -173,8 +177,9 @@ function buildMarkdown(payload) {
   const authorLink = createObsidianLink(payload.author);
   const author = escapeYamlValue(authorLink);
   const url = escapeYamlValue(payload.url);
+  const sourceLabel = SOURCES[payload.source] || payload.source;
 
-  return `---\ntitle: ${title}\nauthor: ${author}\nsource: 知乎\nurl: ${url}\nsaved_at: ${savedDate}\ntags:\n  - 知乎\n  - 待整理\n---\n\n# ${payload.title}\n\n> 作者：${authorLink}\n> 原文：${payload.url}\n\n${markdownBody}\n`;
+  return `---\ntitle: ${title}\nauthor: ${author}\nsource: ${sourceLabel}\nurl: ${url}\nsaved_at: ${savedDate}\ntags:\n  - ${sourceLabel}\n  - 待整理\n---\n\n# ${payload.title}\n\n> 作者：${authorLink}\n> 原文：${payload.url}\n\n${markdownBody}\n`;
 }
 
 async function getAvailableFilePath(targetDir, title) {
