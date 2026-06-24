@@ -1,0 +1,315 @@
+# 知乎保存到 Obsidian
+
+本地优先的知乎 Markdown 保存工具。
+
+这个项目由一个 Chrome 扩展和一个本地 Node.js 服务组成，可以把当前浏览器里已经打开并渲染完成的知乎文章、回答或专栏页面保存为 Markdown 文件，并写入本地 Obsidian Vault。
+
+> English: Save rendered Zhihu articles and answers to a local Obsidian vault as Markdown.
+
+## 特点
+
+- 本地运行，不依赖云端服务
+- 不读取知乎 Cookie
+- 不模拟登录知乎
+- 不调用知乎内部接口
+- 不上传文章内容、密码、Token 或 API Key
+- 支持知乎问题回答页和知乎专栏文章页
+- 问题页支持从多个答主回答中选择其中一个保存
+- 自动转换为 Obsidian 友好的 Markdown
+- 文件重名时自动保留已有文件，生成新文件名
+
+## 适合谁使用
+
+这个项目适合希望把知乎内容整理到 Obsidian 的用户，尤其适合：
+
+- 想把知乎文章或回答保存成 Markdown
+- 想保留标题、作者、原文链接和正文
+- 不想把内容发送到第三方服务
+- 能接受在本机运行一个轻量 Node.js 服务
+
+## 工作方式
+
+```text
+Chrome 当前知乎页面
+  -> Chrome 扩展读取已渲染的标题、作者、正文、链接
+  -> POST http://127.0.0.1:3721/save
+  -> 本地 Node.js 服务把 HTML 转成 Markdown
+  -> 保存到 Obsidian Vault
+```
+
+服务只监听 `127.0.0.1`，也就是只允许本机访问。
+
+## 项目结构
+
+```text
+zhihu-save-to-obsidian/
+  config.json              # 本地保存配置
+  config.example.json      # 配置示例
+  package.json             # Node.js 依赖和启动命令
+  server/
+    index.js               # 本地 Express 服务
+  extension/
+    manifest.json          # Chrome Extension Manifest V3
+    content.js             # 读取知乎页面内容
+    popup.html             # 扩展弹窗页面
+    popup.js               # 弹窗交互和保存请求
+  tests/
+    content-extraction.test.mjs
+```
+
+## 安装 Node.js 依赖
+
+克隆项目后，进入项目目录：
+
+```bash
+cd zhihu-save-to-obsidian
+```
+
+安装依赖：
+
+```bash
+npm install
+```
+
+安装完成后，终端里应该看到类似 `found 0 vulnerabilities` 的提示。
+
+## 修改 config.json
+
+复制配置示例：
+
+```bash
+cp config.example.json config.json
+```
+
+打开 `config.json`：
+
+```json
+{
+  "vaultPath": "/Users/你的用户名/Documents/ObsidianVault",
+  "saveFolder": "知乎收藏"
+}
+```
+
+把 `vaultPath` 改成你的 Obsidian Vault 真实路径。`saveFolder` 是 Vault 里面的子文件夹名称，服务会自动创建这个文件夹。
+
+示例：
+
+```json
+{
+  "vaultPath": "/Users/ray/Documents/我的Obsidian",
+  "saveFolder": "知乎收藏"
+}
+```
+
+注意：
+
+- `vaultPath` 必须是绝对路径。
+- `saveFolder` 只能是 Vault 里面的相对目录，不要写成 `/Users/...`。
+- 路径和中文内容都会按 UTF-8 保存。
+
+## 启动本地服务
+
+在项目目录运行：
+
+```bash
+npm start
+```
+
+看到下面这行，表示服务已经启动：
+
+```text
+知乎保存到 Obsidian 服务已启动：http://127.0.0.1:3721
+```
+
+可以用下面命令检查服务是否正常：
+
+```bash
+curl http://127.0.0.1:3721/health
+```
+
+如果返回 `{"ok":true}`，说明服务正常。
+
+## 加载 Chrome 扩展
+
+1. 打开 Chrome，在地址栏输入 `chrome://extensions/`。
+2. 打开右上角的“开发者模式”。
+3. 点击“加载已解压的扩展程序”。
+4. 选择项目里的 `extension` 文件夹。
+
+本机路径示例：
+
+```text
+你的项目目录/zhihu-save-to-obsidian/extension
+```
+
+加载成功后，Chrome 工具栏会出现“知乎保存到 Obsidian”。如果没看到，可以点击工具栏右侧的拼图图标，把扩展固定出来。
+
+## 使用方法
+
+1. 确认 Node.js 服务仍在运行。
+2. 在 Chrome 打开一个知乎问题回答页，或者知乎专栏文章页。
+3. 等页面正文加载完成。
+4. 点击 Chrome 工具栏里的扩展图标。
+5. 弹窗里会显示标题、作者、原文链接。
+6. 如果当前问题页读取到多个回答，先在“选择要保存的回答/正文”下拉框里选择目标答主。
+7. 点击“保存到 Obsidian”。
+8. 成功后，弹窗会显示保存路径。
+
+保存后的 Markdown 文件位置类似：
+
+```text
+/Users/你的用户名/Documents/ObsidianVault/知乎收藏/文章标题.md
+```
+
+如果同名文件已经存在，服务会自动保存成：
+
+```text
+文章标题-1.md
+文章标题-2.md
+```
+
+## 生成的 Markdown 格式
+
+```md
+---
+title: 文章标题
+author: 作者名称
+source: 知乎
+url: 原文链接
+saved_at: 2026-06-24
+tags:
+  - 知乎
+  - 待整理
+---
+
+# 文章标题
+
+> 作者：作者名称
+> 原文：原文链接
+
+正文内容
+```
+
+## 隐私说明
+
+本项目只读取当前浏览器中已经显示出来的页面内容，并通过 `http://127.0.0.1:3721` 发送给本机服务保存。
+
+本项目不会：
+
+- 读取知乎 Cookie
+- 获取知乎账号密码
+- 调用知乎内部 API
+- 上传文章内容到外部服务器
+- 使用任何云端同步或 AI 摘要服务
+
+## 常见错误及排查方式
+
+### 保存失败：请确认 Node.js 服务已经启动
+
+说明扩展无法访问本机服务。请确认终端里已经运行：
+
+```bash
+npm start
+```
+
+也可以用下面命令检查服务：
+
+```bash
+curl http://127.0.0.1:3721/health
+```
+
+### 未能读取正文
+
+可能原因：
+
+- 当前页面不是知乎问题回答页或知乎专栏文章页。
+- 页面正文还没加载完。
+- 知乎页面 DOM 结构变化，当前选择器没有匹配到正文。
+
+可以刷新页面，等正文出现后再点击扩展。
+
+### config.json 缺少 vaultPath
+
+请检查 `config.json` 是否存在，并且格式类似：
+
+```json
+{
+  "vaultPath": "/Users/ray/Documents/ObsidianVault",
+  "saveFolder": "知乎收藏"
+}
+```
+
+JSON 里不能有多余逗号，字符串必须使用英文双引号。
+
+### 保存路径不对
+
+检查 `vaultPath` 是否是你的真实 Obsidian Vault 路径。服务会把文件保存到：
+
+```text
+vaultPath/saveFolder/文章标题.md
+```
+
+## 查看 Node.js 服务日志
+
+启动服务的那个终端窗口就是日志窗口。
+
+保存成功时会显示：
+
+```text
+已保存：/Users/你的用户名/Documents/ObsidianVault/知乎收藏/文章标题.md
+```
+
+保存失败时也会在这里显示错误原因，例如配置错误、正文为空、JSON 格式错误等。
+
+## 开发自检
+
+检查 content script 对知乎专栏和回答 DOM 的提取逻辑：
+
+```bash
+npm test
+```
+
+手动测试本地保存接口：
+
+```bash
+curl -X POST http://127.0.0.1:3721/save \
+  -H 'Content-Type: application/json' \
+  --data-binary '{
+    "source": "zhihu",
+    "title": "测试文章",
+    "author": "测试作者",
+    "url": "https://zhuanlan.zhihu.com/p/test",
+    "html": "<p>这是一段测试正文。</p>",
+    "savedAt": "2026-06-24T12:00:00.000Z"
+  }'
+```
+
+## 截图
+
+截图可以放在 `assets/screenshots/` 目录。
+
+建议补充：
+
+- Chrome 扩展弹窗截图
+- 保存成功后的 Obsidian Markdown 截图
+- Chrome 加载扩展页面截图
+
+## 发布前检查清单
+
+- [ ] 没有提交个人本地的 `config.json`
+- [ ] 没有提交知乎 Cookie、密码、Token 或 API Key
+- [ ] `npm install` 能成功安装依赖
+- [ ] `npm test` 能通过
+- [ ] `npm start` 能启动服务
+- [ ] Chrome 可以加载 `extension` 文件夹
+- [ ] 保存知乎专栏文章成功
+- [ ] 保存知乎问题回答成功
+- [ ] README 截图已补充
+
+## 免责声明
+
+本项目是个人开源工具，不隶属于知乎或 Obsidian，也不是知乎或 Obsidian 的官方产品。请只保存你有权保存和整理的内容，并遵守相关网站条款和版权要求。
+
+## License
+
+MIT

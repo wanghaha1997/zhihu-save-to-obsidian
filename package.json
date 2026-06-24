@@ -1,0 +1,26 @@
+{
+  "name": "zhihu-save-to-obsidian",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Save rendered Zhihu articles and answers to a local Obsidian vault.",
+  "license": "MIT",
+  "keywords": [
+    "zhihu",
+    "obsidian",
+    "markdown",
+    "chrome-extension"
+  ],
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node tests/content-extraction.test.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "turndown": "^7.2.0"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

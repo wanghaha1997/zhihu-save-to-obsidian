@@ -1,0 +1,143 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { JSDOM } from "jsdom";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, "..");
+const contentScript = await fs.readFile(path.join(projectRoot, "extension", "content.js"), "utf8");
+
+await testZhuanlanArticle();
+await testQuestionAnswer();
+await testMultipleQuestionAnswers();
+await testNestedRichTextIsNotDuplicated();
+console.log("content extraction tests passed");
+
+async function testZhuanlanArticle() {
+  const data = await extractFromHtml(`<!doctype html>
+    <html>
+      <head><title>专栏标题 - 知乎</title></head>
+      <body>
+        <h1>专栏文章标题</h1>
+        <a class="UserLink-link">专栏作者</a>
+        <article class="Post-RichTextContainer">
+          <p>这是专栏正文第一段。</p>
+          <p>这是专栏正文第二段。</p>
+        </article>
+      </body>
+    </html>`, "https://zhuanlan.zhihu.com/p/123456");
+
+  assertEqual(data.title, "专栏文章标题", "专栏标题提取失败");
+  assertEqual(data.author, "专栏作者", "专栏作者提取失败");
+  assertIncludes(data.html, "这是专栏正文第一段。", "专栏正文提取失败");
+  assertEqual(data.url, "https://zhuanlan.zhihu.com/p/123456", "专栏 URL 提取失败");
+  assertEqual(data.candidates.length, 1, "专栏候选数量错误");
+}
+
+async function testQuestionAnswer() {
+  const data = await extractFromHtml(`<!doctype html>
+    <html>
+      <head><title>问题回答 - 知乎</title></head>
+      <body>
+        <div class="QuestionHeader-title">知乎问题标题</div>
+        <div class="AuthorInfo-name">回答作者</div>
+        <div class="AnswerItem">
+          <div class="RichContent-inner">
+            <p>短内容。</p>
+          </div>
+        </div>
+        <div class="AnswerItem">
+          <div class="RichContent-inner">
+            <p>这是回答正文第一段。</p>
+            <p>这是回答正文第二段，内容更长。</p>
+          </div>
+        </div>
+      </body>
+    </html>`, "https://www.zhihu.com/question/123/answer/456");
+
+  assertEqual(data.title, "知乎问题标题", "回答标题提取失败");
+  assertEqual(data.author, "回答作者", "回答作者提取失败");
+  assertIncludes(data.html, "短内容。", "默认回答正文提取失败");
+  assertEqual(data.url, "https://www.zhihu.com/question/123/answer/456", "回答 URL 提取失败");
+  assertEqual(data.candidates.length, 2, "回答候选数量错误");
+}
+
+async function testMultipleQuestionAnswers() {
+  const data = await extractFromHtml(`<!doctype html>
+    <html>
+      <head><title>问题回答 - 知乎</title></head>
+      <body>
+        <div class="QuestionHeader-title">知乎问题标题</div>
+        <div class="AnswerItem">
+          <div class="AuthorInfo-name">答主 A</div>
+          <div class="RichContent-inner">
+            <p>A 的回答。</p>
+          </div>
+        </div>
+        <div class="AnswerItem">
+          <div class="AuthorInfo-name">答主 B</div>
+          <div class="RichContent-inner">
+          <p>这是回答正文第一段。</p>
+          <p>这是回答正文第二段，内容更长。</p>
+          </div>
+        </div>
+      </body>
+    </html>`, "https://www.zhihu.com/question/123/answer/456");
+
+  assertEqual(data.candidates.length, 2, "多回答候选数量错误");
+  assertEqual(data.candidates[0].author, "答主 A", "第一个候选作者错误");
+  assertEqual(data.candidates[1].author, "答主 B", "第二个候选作者错误");
+  assertIncludes(data.candidates[0].html, "A 的回答", "第一个候选正文错误");
+  assertIncludes(data.candidates[1].html, "这是回答正文第二段", "第二个候选正文错误");
+}
+
+async function testNestedRichTextIsNotDuplicated() {
+  const data = await extractFromHtml(`<!doctype html>
+    <html>
+      <head><title>问题回答 - 知乎</title></head>
+      <body>
+        <div class="QuestionHeader-title">知乎问题标题</div>
+        <div class="AnswerItem">
+          <div class="AuthorInfo-name">答主 A</div>
+          <div class="RichContent-inner">
+            <div class="RichText">
+              <p>A 的回答会同时匹配两个正文选择器。</p>
+            </div>
+          </div>
+        </div>
+        <div class="AnswerItem">
+          <div class="AuthorInfo-name">答主 B</div>
+          <div class="RichContent-inner">
+            <div class="RichText">
+              <p>B 的回答也只能出现一次。</p>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>`, "https://www.zhihu.com/question/123/answer/456");
+
+  assertEqual(data.candidates.length, 2, "嵌套 RichText 不应造成候选重复");
+  assertEqual(data.candidates[0].author, "答主 A", "去重后第一个候选作者错误");
+  assertEqual(data.candidates[1].author, "答主 B", "去重后第二个候选作者错误");
+}
+
+async function extractFromHtml(html, url) {
+  const dom = new JSDOM(html, {
+    url,
+    runScripts: "dangerously"
+  });
+  dom.window.eval(contentScript);
+  return dom.window.__zhihuSaveToObsidianExtract();
+}
+
+function assertEqual(actual, expected, message) {
+  if (actual !== expected) {
+    throw new Error(`${message}，实际值：${actual}`);
+  }
+}
+
+function assertIncludes(actual, expected, message) {
+  if (!actual.includes(expected)) {
+    throw new Error(`${message}，实际值：${actual}`);
+  }
+}
