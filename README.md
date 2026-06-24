@@ -298,17 +298,19 @@ curl -X POST http://127.0.0.1:3721/save \
 
 ![Obsidian 中保存的知乎 Markdown 笔记](assets/screenshots/obsidian-note-result.png)
 
-## 发布前检查清单
+## 维护者发布检查
 
-- [ ] 没有提交个人本地的 `config.json`
-- [ ] 没有提交知乎 Cookie、密码、Token 或 API Key
-- [ ] `npm install` 能成功安装依赖
-- [ ] `npm test` 能通过
-- [ ] `npm start` 能启动服务
-- [ ] Chrome 可以加载 `extension` 文件夹
-- [ ] 保存知乎专栏文章成功
-- [ ] 保存知乎问题回答成功
-- [x] README 截图已补充
+如果你要修改代码并发布新版本，建议发布前确认：
+
+- 不提交个人本地的 `config.json`
+- 不提交知乎 Cookie、密码、Token 或 API Key
+- `npm install` 能成功安装依赖
+- `npm test` 能通过
+- `npm start` 能启动服务
+- Chrome 可以加载 `extension` 文件夹
+- 知乎专栏文章可以保存成功
+- 知乎问题回答可以保存成功
+- README 截图和说明仍然准确
 
 ## 免责声明
 
