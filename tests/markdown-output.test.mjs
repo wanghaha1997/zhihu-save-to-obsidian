@@ -37,6 +37,19 @@ assertIncludes(caixinMarkdown, "source: 财新", "财新 source 应写入中文�
 assertIncludes(caixinMarkdown, "  - 财新", "财新标签应写入 Markdown");
 assertIncludes(caixinMarkdown, 'author: "[[于海荣]]"', "财新作者应保存为 Obsidian 内部链接");
 
+const zsxqMarkdown = buildMarkdown({
+  source: "zsxq",
+  title: "知识星球测试标题",
+  author: "星球作者",
+  url: "https://wx.zsxq.com/dweb2/index/topic_detail/123456",
+  html: "<p>知识星球测试正文。</p>",
+  savedAt: "2026-06-25T12:00:00.000Z"
+});
+
+assertIncludes(zsxqMarkdown, "source: 知识星球", "知识星球 source 应写入中文来源");
+assertIncludes(zsxqMarkdown, "  - 知识星球", "知识星球标签应写入 Markdown");
+assertIncludes(zsxqMarkdown, 'author: "[[星球作者]]"', "知识星球作者应保存为 Obsidian 内部链接");
+
 console.log("markdown output tests passed");
 
 function assertIncludes(actual, expected, message) {

@@ -4,6 +4,10 @@
       return extractCaixinPage();
     }
 
+    if (isZsxqPage()) {
+      return extractZsxqPage();
+    }
+
     return extractZhihuPage();
   }
 
@@ -83,6 +87,37 @@
       source: "caixin",
       title: normalizedTitle,
       author: normalizedAuthor,
+      url: location.href,
+      html,
+      candidates,
+      warnings
+    };
+  }
+
+  function extractZsxqPage() {
+    const candidates = getZsxqCandidates();
+    const selectedCandidate = candidates[0] || null;
+    const title = getZsxqTitle(selectedCandidate);
+    const author = selectedCandidate ? selectedCandidate.author : getZsxqPageAuthor();
+    const html = selectedCandidate ? selectedCandidate.html : "";
+    const warnings = [];
+
+    if (!title) {
+      warnings.push("未能获取标题，将使用页面标题或默认标题。");
+    }
+
+    if (!author) {
+      warnings.push("未能获取作者，将保存为未知作者。");
+    }
+
+    if (!html) {
+      warnings.push("未能获取正文，请确认知识星球内容已经加载完成。");
+    }
+
+    return {
+      source: "zsxq",
+      title: title || document.title || "未命名知识星球内容",
+      author: author || "未知作者",
       url: location.href,
       html,
       candidates,
@@ -271,6 +306,118 @@
     return bestElement;
   }
 
+  function getZsxqCandidates() {
+    const containers = getZsxqCandidateContainers();
+    const seenContainers = new Set();
+    const seenFingerprints = new Set();
+    const candidates = [];
+
+    for (const container of containers) {
+      if (!container || seenContainers.has(container)) {
+        continue;
+      }
+
+      const contentElement = getZsxqContentElement(container);
+
+      if (!contentElement) {
+        continue;
+      }
+
+      const html = cleanContentHtml(contentElement);
+      const text = normalizeText(contentElement.textContent);
+
+      if (!html || text.length < 20) {
+        continue;
+      }
+
+      const fingerprint = getTextFingerprint(text);
+
+      if (seenFingerprints.has(fingerprint)) {
+        continue;
+      }
+
+      seenContainers.add(container);
+      seenFingerprints.add(fingerprint);
+
+      const author = getZsxqContainerAuthor(container) || getZsxqPageAuthor() || "未知作者";
+
+      candidates.push({
+        id: `candidate-${candidates.length + 1}`,
+        label: buildCandidateLabel(candidates.length + 1, author, text),
+        author,
+        html,
+        textPreview: text.slice(0, 80),
+        url: location.href
+      });
+    }
+
+    return candidates.slice(0, 20);
+  }
+
+  function getZsxqCandidateContainers() {
+    const selectors = [
+      ".topic-item",
+      ".topicItem",
+      ".topic-detail",
+      ".topicDetail",
+      ".post-item",
+      ".feed-item",
+      ".content-item",
+      "article",
+      "[class*='topic']",
+      "[class*='feed']",
+      "[class*='post']"
+    ];
+    const containers = selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
+
+    if (containers.length > 0) {
+      return dedupeNestedElements(containers);
+    }
+
+    return [document.body].filter(Boolean);
+  }
+
+  function getZsxqContentElement(container) {
+    const selectors = [
+      ".topic-content",
+      ".topicContent",
+      ".content",
+      ".text-content",
+      ".post-content",
+      ".article-content",
+      "[class*='content']",
+      "[class*='text']"
+    ];
+
+    for (const selector of selectors) {
+      const element = container.querySelector(selector);
+
+      if (element && normalizeText(element.textContent).length >= 20) {
+        return element;
+      }
+    }
+
+    return normalizeText(container.textContent).length >= 20 ? container : null;
+  }
+
+  function dedupeNestedElements(elements) {
+    const uniqueElements = [];
+
+    for (const element of elements) {
+      if (uniqueElements.some((existing) => existing.contains(element))) {
+        continue;
+      }
+
+      if (uniqueElements.some((existing) => element.contains(existing))) {
+        continue;
+      }
+
+      uniqueElements.push(element);
+    }
+
+    return uniqueElements;
+  }
+
   function cleanContentHtml(element) {
     const clone = element.cloneNode(true);
 
@@ -329,6 +476,61 @@
     return "";
   }
 
+  function getZsxqPageAuthor() {
+    return getFirstText([
+      ".user-name",
+      ".username",
+      ".author-name",
+      ".nickname",
+      "[class*='user'][class*='name']",
+      "[class*='author']",
+      "[class*='nickname']"
+    ]);
+  }
+
+  function getZsxqContainerAuthor(container) {
+    if (!container) {
+      return "";
+    }
+
+    return getFirstTextIn(container, [
+      ".user-name",
+      ".username",
+      ".author-name",
+      ".nickname",
+      "[class*='user'][class*='name']",
+      "[class*='author']",
+      "[class*='nickname']"
+    ]);
+  }
+
+  function getZsxqTitle(candidate) {
+    const explicitTitle = getFirstText([
+      "h1",
+      ".title",
+      ".topic-title",
+      ".post-title",
+      "[class*='title']"
+    ]);
+
+    if (explicitTitle) {
+      return stripZsxqTitle(explicitTitle);
+    }
+
+    if (candidate && candidate.textPreview) {
+      return stripZsxqTitle(candidate.textPreview.slice(0, 42));
+    }
+
+    return stripZsxqTitle(document.title || "");
+  }
+
+  function stripZsxqTitle(value) {
+    return normalizeText(value)
+      .replace(/[-_｜|].*?知识星球.*$/, "")
+      .replace(/^知识星球\s*/, "")
+      .trim();
+  }
+
   function buildCandidateLabel(index, author, text) {
     const preview = text.slice(0, 36);
     return `${index}. ${author || "未知作者"}：${preview}${text.length > 36 ? "..." : ""}`;
@@ -344,6 +546,10 @@
 
   function isCaixinPage() {
     return /(^|\.)caixin\.com$/.test(location.hostname);
+  }
+
+  function isZsxqPage() {
+    return /(^|\.)zsxq\.com$/.test(location.hostname);
   }
 
   function stripCaixinTitle(value) {

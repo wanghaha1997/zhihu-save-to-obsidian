@@ -12,6 +12,7 @@ await testQuestionAnswer();
 await testMultipleQuestionAnswers();
 await testNestedRichTextIsNotDuplicated();
 await testCaixinArticle();
+await testZsxqTopics();
 console.log("content extraction tests passed");
 
 async function testZhuanlanArticle() {
@@ -145,6 +146,33 @@ async function testCaixinArticle() {
   assertEqual(data.author, "于海荣", "财新作者提取失败");
   assertIncludes(data.html, "供强需弱是根源于中国", "财新正文提取失败");
   assertEqual(data.candidates.length, 1, "财新候选数量错误");
+}
+
+async function testZsxqTopics() {
+  const data = await extractFromHtml(`<!doctype html>
+    <html>
+      <head><title>知识星球</title></head>
+      <body>
+        <div class="topic-item">
+          <div class="user-name">星球作者 A</div>
+          <div class="topic-content">
+            <p>这是知识星球第一条内容，适合保存到 Obsidian。</p>
+          </div>
+        </div>
+        <div class="topic-item">
+          <div class="user-name">星球作者 B</div>
+          <div class="topic-content">
+            <p>这是知识星球第二条内容，也应该成为一个候选项。</p>
+          </div>
+        </div>
+      </body>
+    </html>`, "https://wx.zsxq.com/dweb2/index/topic_detail/123456");
+
+  assertEqual(data.source, "zsxq", "知识星球 source 提取失败");
+  assertEqual(data.author, "星球作者 A", "知识星球默认作者提取失败");
+  assertIncludes(data.html, "这是知识星球第一条内容", "知识星球默认正文提取失败");
+  assertEqual(data.candidates.length, 2, "知识星球候选数量错误");
+  assertEqual(data.candidates[1].author, "星球作者 B", "知识星球第二个候选作者错误");
 }
 
 async function extractFromHtml(html, url) {

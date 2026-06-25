@@ -22,7 +22,8 @@ const turndownService = new TurndownService({
 });
 const SOURCES = {
   zhihu: "知乎",
-  caixin: "财新"
+  caixin: "财新",
+  zsxq: "知识星球"
 };
 
 app.disable("x-powered-by");

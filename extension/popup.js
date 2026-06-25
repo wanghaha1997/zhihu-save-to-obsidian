@@ -43,7 +43,7 @@ async function init() {
     authorElement.textContent = "未能读取";
     urlElement.textContent = "未能读取";
     saveButton.disabled = true;
-    setStatus(`读取失败：${error.message}\n请确认当前标签页是知乎问题回答页、知乎专栏文章页或财新文章页。`, "error");
+    setStatus(`读取失败：${error.message}\n请确认当前标签页是知乎问题回答页、知乎专栏文章页、财新文章页或知识星球内容页。`, "error");
   }
 }
 
