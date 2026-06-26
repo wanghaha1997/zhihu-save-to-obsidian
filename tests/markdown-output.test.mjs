@@ -50,10 +50,56 @@ assertIncludes(zsxqMarkdown, "source: 知识星球", "知识星球 source 应写
 assertIncludes(zsxqMarkdown, "  - 知识星球", "知识星球标签应写入 Markdown");
 assertIncludes(zsxqMarkdown, 'author: "[[星球作者]]"', "知识星球作者应保存为 Obsidian 内部链接");
 
+const zsxqWithMetaMarkdown = buildMarkdown({
+  source: "zsxq",
+  title: "谈一谈存储预期差",
+  author: "星球作者",
+  url: "https://wx.zsxq.com/dweb2/index/topic_detail/123456",
+  html: "<p>谈一谈存储预期差 昨天美光业绩大好。 -赛腾股份，前道检测设备。 -深科技，HBM封测。</p>",
+  planet: "某投资星球",
+  publishedAt: "2026-06-24 09:00",
+  comments: [
+    {
+      author: "读者甲",
+      time: "2026-06-24 10:00",
+      text: "评论内容。"
+    }
+  ],
+  savedAt: "2026-06-25T12:00:00.000Z"
+});
+
+assertIncludes(zsxqWithMetaMarkdown, 'planet: "某投资星球"', "知识星球名称应写入 frontmatter");
+assertIncludes(zsxqWithMetaMarkdown, "published_at:", "知识星球发布时间应写入 frontmatter");
+assertIncludes(zsxqWithMetaMarkdown, "> [[星球作者]] · [[某投资星球]]", "知识星球摘要应写入引用块");
+assertIncludes(zsxqWithMetaMarkdown, "## 评论（1）", "知识星球评论应写入 Markdown");
+assertIncludes(zsxqWithMetaMarkdown, "### [[读者甲]] · 2026-06-24 10:00", "知识星球评论标题应包含作者和时间");
+assertIncludes(zsxqWithMetaMarkdown, "评论内容。", "知识星球评论正文应写入 Markdown");
+assertIncludes(zsxqWithMetaMarkdown, "\n- 赛腾股份", "知识星球列表应换行排版");
+assertNotIncludes(zsxqWithMetaMarkdown, "# 谈一谈存储预期差", "知识星球不应重复输出一级标题");
+
+const zsxqUnsafePlanetMarkdown = buildMarkdown({
+  source: "zsxq",
+  title: "知识星球标签清理测试",
+  author: "星球作者",
+  url: "https://wx.zsxq.com/dweb2/index/topic_detail/123456",
+  html: "<p>知识星球测试正文。</p>",
+  planet: "投研:星球#1",
+  savedAt: "2026-06-25T12:00:00.000Z"
+});
+
+assertIncludes(zsxqUnsafePlanetMarkdown, 'planet: "投研:星球#1"', "知识星球名称属性应保留原始文本");
+assertIncludes(zsxqUnsafePlanetMarkdown, "  - 投研星球1", "知识星球标签应清理 YAML/标签特殊字符");
+
 console.log("markdown output tests passed");
 
 function assertIncludes(actual, expected, message) {
   if (!actual.includes(expected)) {
+    throw new Error(`${message}，实际内容：${actual}`);
+  }
+}
+
+function assertNotIncludes(actual, expected, message) {
+  if (actual.includes(expected)) {
     throw new Error(`${message}，实际内容：${actual}`);
   }
 }

@@ -13,6 +13,8 @@ await testMultipleQuestionAnswers();
 await testNestedRichTextIsNotDuplicated();
 await testCaixinArticle();
 await testZsxqTopics();
+await testZsxqTopicDetailWithComments();
+await testZsxqTitleFromBody();
 console.log("content extraction tests passed");
 
 async function testZhuanlanArticle() {
@@ -151,28 +153,135 @@ async function testCaixinArticle() {
 async function testZsxqTopics() {
   const data = await extractFromHtml(`<!doctype html>
     <html>
-      <head><title>知识星球</title></head>
+      <head><title>某投资星球 - 知识星球</title></head>
       <body>
-        <div class="topic-item">
-          <div class="user-name">星球作者 A</div>
-          <div class="topic-content">
-            <p>这是知识星球第一条内容，适合保存到 Obsidian。</p>
-          </div>
-        </div>
-        <div class="topic-item">
-          <div class="user-name">星球作者 B</div>
-          <div class="topic-content">
-            <p>这是知识星球第二条内容，也应该成为一个候选项。</p>
-          </div>
-        </div>
+        <app-main-content>
+          <div class="group-name">某投资星球</div>
+          <app-topic>
+            <div class="topic-container">
+              <app-topic-header>
+                <div class="header-container">
+                  <div class="author"><div class="info"><div class="role">星球作者 A</div></div></div>
+                  <div class="date">2026-06-24 10:00</div>
+                </div>
+              </app-topic-header>
+              <app-talk-content>
+                <div class="talk-content-container">
+                  <div class="content"><p>这是知识星球第一条内容，适合保存到 Obsidian。</p></div>
+                </div>
+              </app-talk-content>
+              <div class="comment-box">
+                <app-comment-item>
+                  <div class="comment-item-container">
+                    <div class="text"><div class="comment">读者甲</div></div>
+                    <div class="text">感谢分享。</div>
+                    <div class="operations"><div class="time">2026-06-24 11:00</div></div>
+                  </div>
+                </app-comment-item>
+              </div>
+            </div>
+          </app-topic>
+          <app-topic>
+            <div class="topic-container">
+              <app-topic-header>
+                <div class="header-container">
+                  <div class="author"><div class="info"><div class="role">星球作者 B</div></div></div>
+                </div>
+              </app-topic-header>
+              <app-talk-content>
+                <div class="talk-content-container">
+                  <div class="content"><p>这是知识星球第二条内容，也应该成为一个候选项。</p></div>
+                </div>
+              </app-talk-content>
+            </div>
+          </app-topic>
+        </app-main-content>
       </body>
-    </html>`, "https://wx.zsxq.com/dweb2/index/topic_detail/123456");
+    </html>`, "https://wx.zsxq.com/dweb2/index/group/123456");
 
   assertEqual(data.source, "zsxq", "知识星球 source 提取失败");
+  assertEqual(data.planet, "某投资星球", "知识星球名称提取失败");
   assertEqual(data.author, "星球作者 A", "知识星球默认作者提取失败");
   assertIncludes(data.html, "这是知识星球第一条内容", "知识星球默认正文提取失败");
   assertEqual(data.candidates.length, 2, "知识星球候选数量错误");
+  assertEqual(data.candidates[0].comments.length, 1, "知识星球评论数量错误");
+  assertEqual(data.candidates[0].comments[0].author, "读者甲", "知识星球评论作者错误");
+  assertIncludes(data.candidates[0].html, "这是知识星球第一条内容", "知识星球正文不应包含评论");
   assertEqual(data.candidates[1].author, "星球作者 B", "知识星球第二个候选作者错误");
+}
+
+async function testZsxqTopicDetailWithComments() {
+  const data = await extractFromHtml(`<!doctype html>
+    <html>
+      <head><title>某投资星球 - 知识星球</title></head>
+      <body>
+        <app-topic-detail-page>
+          <div class="group-name">某投资星球</div>
+          <app-topic-detail>
+            <div id="topic-detail-container" class="topic-detail">
+              <app-topic-header>
+                <div class="header-container">
+                  <div class="author"><div class="info"><div class="role">星球作者 A</div></div></div>
+                  <div class="date">2026-06-24 09:00</div>
+                </div>
+              </app-topic-header>
+              <app-talk-content>
+                <div class="talk-content-container">
+                  <div class="content"><p>这是详情页正文，应该单独保存。</p></div>
+                </div>
+              </app-talk-content>
+            </div>
+          </app-topic-detail>
+          <div class="comment-container">
+            <app-comment-item>
+              <div class="comment-item-container">
+                <div class="text"><div class="comment">读者甲</div></div>
+                <div class="text">读者评论内容。</div>
+                <div class="operations"><div class="time">2026-06-24 10:00</div></div>
+              </div>
+            </app-comment-item>
+            <app-comment-item>
+              <div class="comment-item-container">
+                <div class="text"><div class="comment">星球作者 A</div></div>
+                <div class="text">答主回复内容。</div>
+                <div class="operations"><div class="time">2026-06-24 10:30</div></div>
+              </div>
+            </app-comment-item>
+          </div>
+        </app-topic-detail-page>
+      </body>
+    </html>`, "https://wx.zsxq.com/dweb2/index/topic_detail/123456");
+
+  assertEqual(data.candidates.length, 1, "详情页应只提取一条主题");
+  assertIncludes(data.candidates[0].html, "这是详情页正文", "详情页正文提取失败");
+  assertEqual(data.candidates[0].comments.length, 2, "详情页评论数量错误");
+  assertEqual(data.candidates[0].comments[1].author, "星球作者 A", "详情页答主评论作者错误");
+}
+
+async function testZsxqTitleFromBody() {
+  const data = await extractFromHtml(`<!doctype html>
+    <html>
+      <head><title>创建/管理的星球 - 知识星球</title></head>
+      <body>
+        <app-topic>
+          <div class="topic-container">
+            <app-topic-header>
+              <div class="header-container">
+                <div class="author"><div class="info"><div class="role">南院大王</div></div></div>
+              </div>
+            </app-topic-header>
+            <app-talk-content>
+              <div class="talk-content-container">
+                <div class="content"><p>谈一谈存储预期差 昨天美光业绩大好，盘后大涨。</p></div>
+              </div>
+            </app-talk-content>
+          </div>
+        </app-topic>
+      </body>
+    </html>`, "https://wx.zsxq.com/group/15284248885222");
+
+  assertEqual(data.title, "谈一谈存储预期差", "知识星球标题应来自正文而不是页面导航");
+  assertEqual(data.candidates[0].title, "谈一谈存储预期差", "知识星球候选标题应来自正文");
 }
 
 async function extractFromHtml(html, url) {

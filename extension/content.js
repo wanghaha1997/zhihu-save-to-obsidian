@@ -95,9 +95,10 @@
   }
 
   function extractZsxqPage() {
+    const planet = getZsxqPlanetName();
     const candidates = getZsxqCandidates();
     const selectedCandidate = candidates[0] || null;
-    const title = getZsxqTitle(selectedCandidate);
+    const title = selectedCandidate ? (selectedCandidate.title || getZsxqTitle(selectedCandidate)) : getZsxqTitle(null);
     const author = selectedCandidate ? selectedCandidate.author : getZsxqPageAuthor();
     const html = selectedCandidate ? selectedCandidate.html : "";
     const warnings = [];
@@ -114,11 +115,16 @@
       warnings.push("未能获取正文，请确认知识星球内容已经加载完成。");
     }
 
+    if (selectedCandidate && selectedCandidate.comments.length === 0) {
+      warnings.push("未读取到评论，保存时将只包含正文。");
+    }
+
     return {
       source: "zsxq",
       title: title || document.title || "未命名知识星球内容",
       author: author || "未知作者",
-      url: location.href,
+      url: selectedCandidate ? selectedCandidate.url : location.href,
+      planet,
       html,
       candidates,
       warnings
@@ -317,16 +323,17 @@
         continue;
       }
 
-      const contentElement = getZsxqContentElement(container);
+      const author = getZsxqContainerAuthor(container) || getZsxqPageAuthor() || "未知作者";
+      const contentElement = getZsxqMainContentElement(container);
 
       if (!contentElement) {
         continue;
       }
 
-      const html = cleanContentHtml(contentElement);
+      const html = cleanZsxqContentHtml(contentElement);
       const text = normalizeText(contentElement.textContent);
 
-      if (!html || text.length < 20) {
+      if (!html || text.length < 1) {
         continue;
       }
 
@@ -339,15 +346,23 @@
       seenContainers.add(container);
       seenFingerprints.add(fingerprint);
 
-      const author = getZsxqContainerAuthor(container) || getZsxqPageAuthor() || "未知作者";
+      const comments = extractZsxqComments(container, author);
+      const publishedAt = getZsxqPublishedAt(container);
+      const topicUrl = getZsxqTopicUrl(container) || location.href;
+      const topicId = getZsxqTopicId(container);
 
       candidates.push({
         id: `candidate-${candidates.length + 1}`,
-        label: buildCandidateLabel(candidates.length + 1, author, text),
+        label: buildZsxqCandidateLabel(candidates.length + 1, author, text, comments.length),
+        title: getZsxqTitle({ textPreview: text, author, html }),
         author,
         html,
         textPreview: text.slice(0, 80),
-        url: location.href
+        url: topicUrl,
+        topicId,
+        planet: getZsxqPlanetName(),
+        publishedAt,
+        comments
       });
     }
 
@@ -355,49 +370,433 @@
   }
 
   function getZsxqCandidateContainers() {
+    if (isZsxqTopicDetailPage()) {
+      const detailContainer = getFirstElement([
+        "app-topic-detail",
+        "#topic-detail-container",
+        ".topic-detail",
+        ".topic-detail-page",
+        "app-topic-detail-page"
+      ]);
+
+      if (detailContainer) {
+        return [detailContainer];
+      }
+
+      return [];
+    }
+
     const selectors = [
+      "app-topic",
+      ".topic-container",
+      ".digest-topic-item",
       ".topic-item",
-      ".topicItem",
-      ".topic-detail",
-      ".topicDetail",
-      ".post-item",
-      ".feed-item",
-      ".content-item",
-      "article",
-      "[class*='topic']",
-      "[class*='feed']",
-      "[class*='post']"
+      ".topicItem"
     ];
-    const containers = selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
+    const mainRoot = document.querySelector("app-main-content, main, [role='main'], #app") || document;
+    const containers = selectors.flatMap((selector) => Array.from(mainRoot.querySelectorAll(selector)));
 
     if (containers.length > 0) {
       return dedupeNestedElements(containers);
     }
 
-    return [document.body].filter(Boolean);
+    return [];
   }
 
-  function getZsxqContentElement(container) {
-    const selectors = [
+  function getZsxqMainContentElement(container) {
+    const answerContainer = container.querySelector("app-answer-content .answer-content-container");
+
+    if (answerContainer) {
+      return buildZsxqAnswerContent(answerContainer);
+    }
+
+    const questionContainer = container.querySelector("app-question-content .question-content-container");
+
+    if (questionContainer) {
+      return questionContainer;
+    }
+
+    const contentSelectors = [
+      "app-talk-content .talk-content-container .content",
+      "app-talk-content .content",
+      ".talk-content-container .content",
+      "app-note-content .content",
+      "app-task-content .content",
+      ".digest-topic-item .topic-content",
       ".topic-content",
-      ".topicContent",
-      ".content",
-      ".text-content",
-      ".post-content",
-      ".article-content",
-      "[class*='content']",
-      "[class*='text']"
+      ".content-text"
     ];
 
-    for (const selector of selectors) {
+    for (const selector of contentSelectors) {
       const element = container.querySelector(selector);
+      const textLength = element ? normalizeText(element.textContent).length : 0;
 
-      if (element && normalizeText(element.textContent).length >= 20) {
+      if (element && textLength >= 1) {
         return element;
       }
     }
 
-    return normalizeText(container.textContent).length >= 20 ? container : null;
+    const scoped = container.cloneNode(true);
+    removeZsxqNoiseNodes(scoped);
+    removeZsxqCommentNodes(scoped);
+
+    const paragraphs = Array.from(scoped.querySelectorAll("p")).filter((element) => normalizeText(element.textContent).length >= 1);
+
+    if (paragraphs.length > 0) {
+      const wrapper = document.createElement("div");
+
+      for (const paragraph of paragraphs) {
+        wrapper.appendChild(paragraph.cloneNode(true));
+      }
+
+      return wrapper;
+    }
+
+    return normalizeText(scoped.textContent).length >= 1 ? scoped : null;
+  }
+
+  function buildZsxqAnswerContent(answerContainer) {
+    const wrapper = document.createElement("div");
+    const questionPart = answerContainer.querySelector(".question");
+    const answerPart = answerContainer.querySelector(".answer");
+
+    if (questionPart) {
+      const questionWrapper = document.createElement("div");
+      questionWrapper.innerHTML = "<h3>问题</h3>";
+      questionWrapper.appendChild(questionPart.cloneNode(true));
+      wrapper.appendChild(questionWrapper);
+    }
+
+    if (answerPart) {
+      const answerWrapper = document.createElement("div");
+      answerWrapper.innerHTML = "<h3>回答</h3>";
+      answerWrapper.appendChild(answerPart.cloneNode(true));
+      wrapper.appendChild(answerWrapper);
+    }
+
+    return wrapper.childNodes.length > 0 ? wrapper : answerContainer;
+  }
+
+  function extractZsxqComments(container, topicAuthor) {
+    const commentItems = collectZsxqCommentElements(container);
+    const seenFingerprints = new Set();
+    const comments = [];
+
+    for (const item of commentItems) {
+      const parsed = parseZsxqCommentElement(item, topicAuthor);
+
+      if (!parsed) {
+        continue;
+      }
+
+      const fingerprint = getTextFingerprint(`${parsed.author}|${parsed.time}|${parsed.text}`);
+
+      if (seenFingerprints.has(fingerprint)) {
+        continue;
+      }
+
+      seenFingerprints.add(fingerprint);
+      comments.push(parsed);
+    }
+
+    return comments.slice(0, 200);
+  }
+
+  function collectZsxqCommentElements(container) {
+    const itemSelectors = [
+      "app-comment-item",
+      ".comment-item-container",
+      ".main-comment-item"
+    ];
+    const roots = [
+      ...container.querySelectorAll(".comment-box, .comment-container, .icon-comment")
+    ];
+
+    if (isZsxqTopicDetailPage()) {
+      const detailRoot = document.querySelector("app-topic-detail-page, app-topic-detail, .topic-detail-page") || document;
+
+      for (const element of detailRoot.querySelectorAll(".comment-container, .comment-box")) {
+        if (!container.contains(element)) {
+          roots.push(element);
+        }
+      }
+    }
+
+    const items = [];
+
+    if (roots.length > 0) {
+      for (const root of dedupeNestedElements(roots)) {
+        for (const selector of itemSelectors) {
+          items.push(...root.querySelectorAll(selector));
+        }
+      }
+    }
+
+    if (items.length === 0) {
+      for (const selector of itemSelectors) {
+        items.push(...container.querySelectorAll(selector));
+      }
+    }
+
+    return dedupeNestedElements(items.filter(Boolean));
+  }
+
+  function parseZsxqCommentElement(element, topicAuthor) {
+    if (!element) {
+      return null;
+    }
+
+    const author = getFirstTextIn(element, [
+      ".comment-item-container > .text .comment",
+      ".comment-item-container .comment",
+      ".main-comment-item .comment",
+      ".comment"
+    ]) || "未知评论者";
+    const time = getFirstTextIn(element, [
+      ".operations .time",
+      ".comment-item-container .time",
+      ".time"
+    ]);
+    const contentElement = getBestZsxqCommentContentElement(element);
+    const clone = contentElement.cloneNode(true);
+    removeZsxqNoiseNodes(clone);
+    const html = clone.innerHTML.trim();
+    const text = normalizeText(clone.textContent);
+
+    if (!text || text.length < 1) {
+      return null;
+    }
+
+    if (topicAuthor && isSameZsxqAuthor(author, topicAuthor) && text.length > 2000 && !element.matches("app-comment-item, .comment-item-container, .main-comment-item")) {
+      return null;
+    }
+
+    return {
+      author,
+      time,
+      html: html || `<p>${text}</p>`,
+      text
+    };
+  }
+
+  function getBestZsxqCommentContentElement(element) {
+    const candidates = Array.from(element.querySelectorAll(".text, .comment-content, .reply-content"));
+    let bestElement = null;
+    let bestLength = 0;
+
+    for (const candidate of candidates) {
+      if (candidate.querySelector(".comment")) {
+        continue;
+      }
+
+      const textLength = normalizeText(candidate.textContent).length;
+
+      if (textLength > bestLength) {
+        bestElement = candidate;
+        bestLength = textLength;
+      }
+    }
+
+    return bestElement || element;
+  }
+
+  function cleanZsxqContentHtml(element) {
+    const clone = normalizeZsxqContentElement(element);
+    return clone.innerHTML.trim();
+  }
+
+  function normalizeZsxqContentElement(element) {
+    const clone = element.cloneNode(true);
+    removeZsxqNoiseNodes(clone);
+    removeZsxqCommentNodes(clone);
+    unwrapZsxqCustomTags(clone);
+
+    if (!clone.querySelector("p, li, h1, h2, h3, h4, blockquote, pre")) {
+      const wrapper = document.createElement("div");
+
+      for (const paragraph of formatZsxqPlainTextToParagraphs(clone.textContent || "")) {
+        const node = document.createElement("p");
+        node.textContent = paragraph;
+        wrapper.appendChild(node);
+      }
+
+      return wrapper.childNodes.length > 0 ? wrapper : clone;
+    }
+
+    return clone;
+  }
+
+  function unwrapZsxqCustomTags(root) {
+    for (const element of root.querySelectorAll("e, [class*='watermark']")) {
+      const replacement = document.createElement("span");
+      replacement.textContent = normalizeText(element.textContent);
+      element.replaceWith(replacement);
+    }
+  }
+
+  function formatZsxqPlainTextToParagraphs(text) {
+    const normalized = normalizeText(text)
+      .replace(/知识星球([\u4e00-\u9fa5A-Za-z0-9·]+)/g, "$1")
+      .replace(/\s+-\s*/g, "\n\n- ")
+      .replace(/([。！？])\s+/g, "$1\n\n");
+
+    return normalized
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean);
+  }
+
+  function getZsxqTopicId(container) {
+    const scope = container || document;
+    const link = scope.querySelector("a[href*='topic_detail/'], a[href*='/topic/']");
+
+    if (link && link.href) {
+      const match = link.href.match(/topic(?:_detail)?\/(\d+)/);
+
+      if (match) {
+        return match[1];
+      }
+    }
+
+    const detailsLink = scope.querySelector(".details-container, [class*='details-container']");
+
+    if (detailsLink) {
+      const onclick = detailsLink.getAttribute("onclick") || "";
+      const match = onclick.match(/topic(?:_detail)?\/(\d+)/) || String(detailsLink.textContent || "").match(/(\d{10,})/);
+
+      if (match) {
+        return match[1];
+      }
+    }
+
+    return getZsxqTopicIdFromUrl();
+  }
+
+  function getZsxqTopicIdFromUrl() {
+    const match = location.pathname.match(/topic(?:_detail)?\/(\d+)/);
+    return match ? match[1] : "";
+  }
+
+  function removeZsxqNoiseNodes(root) {
+    for (const selector of [
+      "script",
+      "style",
+      "iframe",
+      "app-topic-header",
+      "app-topic-operation",
+      ".related",
+      ".recommend",
+      ".share-wrapper",
+      ".share-topic",
+      ".advertisement",
+      ".ad",
+      ".like-container",
+      ".like-user",
+      ".operation-icon-container",
+      ".operation-icon",
+      ".moreComment",
+      ".comment-input",
+      ".reply-input",
+      ".header-container",
+      ".skeleton-container",
+      ".enter-group",
+      ".details-container",
+      ".showAll",
+      ".showAllQuestion",
+      ".ellipsis"
+    ]) {
+      for (const node of root.querySelectorAll(selector)) {
+        node.remove();
+      }
+    }
+  }
+
+  function removeZsxqCommentNodes(root) {
+    for (const selector of [
+      "app-comment-item",
+      ".comment-box",
+      ".comment-container",
+      ".icon-comment",
+      ".comment-item-container",
+      ".main-comment-item",
+      ".comment-list",
+      ".reply-list"
+    ]) {
+      for (const node of root.querySelectorAll(selector)) {
+        node.remove();
+      }
+    }
+  }
+
+  function getZsxqPlanetName() {
+    return getFirstText([
+      ".group-name",
+      ".group-info-card-group-name",
+      ".groupName",
+      ".planet-name",
+      ".header-title",
+      ".nav-title"
+    ]) || stripZsxqTitle(document.title).split(/[-_｜|]/)[0].trim();
+  }
+
+  function getZsxqPublishedAt(container) {
+    return getFirstTextIn(container, [
+      "app-topic-header .date",
+      ".header-container .date",
+      ".modify-time",
+      ".date",
+      ".time"
+    ]);
+  }
+
+  function getZsxqTopicUrl(container) {
+    const topicId = getZsxqTopicId(container);
+
+    if (topicId) {
+      return `https://wx.zsxq.com/dweb2/index/topic_detail/${topicId}`;
+    }
+
+    const link = container.querySelector("a[href*='topic_detail']");
+
+    if (link && link.href) {
+      return link.href;
+    }
+
+    if (isZsxqTopicDetailPage()) {
+      return location.href;
+    }
+
+    return "";
+  }
+
+  function isZsxqTopicDetailPage() {
+    return /\/topic_detail\//.test(location.pathname);
+  }
+
+  function buildZsxqCandidateLabel(index, author, text, commentCount) {
+    const preview = text.slice(0, 36);
+    const commentSuffix = commentCount > 0 ? `（${commentCount} 条评论）` : "";
+    return `${index}. ${author || "未知作者"}：${preview}${text.length > 36 ? "..." : ""}${commentSuffix}`;
+  }
+
+  function isSameZsxqAuthor(left, right) {
+    return normalizeZsxqAuthorName(left) === normalizeZsxqAuthorName(right);
+  }
+
+  function normalizeZsxqAuthorName(value) {
+    return normalizeText(value).replace(/\s+/g, "").toLowerCase();
+  }
+
+  function getFirstElementIn(root, selectors) {
+    for (const selector of selectors) {
+      const element = root.querySelector(selector);
+
+      if (element) {
+        return element;
+      }
+    }
+
+    return null;
   }
 
   function dedupeNestedElements(elements) {
@@ -478,13 +877,12 @@
 
   function getZsxqPageAuthor() {
     return getFirstText([
+      "app-topic-header .role",
+      ".header-container .author .role",
       ".user-name",
       ".username",
       ".author-name",
-      ".nickname",
-      "[class*='user'][class*='name']",
-      "[class*='author']",
-      "[class*='nickname']"
+      ".nickname"
     ]);
   }
 
@@ -494,26 +892,36 @@
     }
 
     return getFirstTextIn(container, [
+      "app-topic-header .role",
+      ".header-container .author .role",
+      ".question-content-container .owner",
+      ".answer-content-container .question-owner",
+      ".owner",
+      ".name",
       ".user-name",
       ".username",
       ".author-name",
-      ".nickname",
-      "[class*='user'][class*='name']",
-      "[class*='author']",
-      "[class*='nickname']"
+      ".nickname"
     ]);
   }
 
   function getZsxqTitle(candidate) {
+    if (candidate && candidate.textPreview) {
+      const titleFromBody = extractZsxqTitleFromText(candidate.textPreview);
+
+      if (titleFromBody) {
+        return titleFromBody;
+      }
+    }
+
     const explicitTitle = getFirstText([
       "h1",
       ".title",
       ".topic-title",
-      ".post-title",
-      "[class*='title']"
+      ".post-title"
     ]);
 
-    if (explicitTitle) {
+    if (explicitTitle && !isGenericZsxqTitle(explicitTitle)) {
       return stripZsxqTitle(explicitTitle);
     }
 
@@ -521,7 +929,49 @@
       return stripZsxqTitle(candidate.textPreview.slice(0, 42));
     }
 
-    return stripZsxqTitle(document.title || "");
+    const pageTitle = stripZsxqTitle(document.title || "");
+    return isGenericZsxqTitle(pageTitle) ? "未命名知识星球内容" : pageTitle;
+  }
+
+  function extractZsxqTitleFromText(text) {
+    const normalized = normalizeText(text);
+    const patterns = [
+      /^(.{4,30}?)\s+昨天/u,
+      /^(.{4,30}?)\s+今天/u,
+      /^(.{4,30}?)\s+昨晚/u,
+      /^(.{4,40}?)\s+(?:我们|那么|另外|如果|觉得|继续|进一步)/u,
+      /^(.{4,42})/u
+    ];
+
+    for (const pattern of patterns) {
+      const match = normalized.match(pattern);
+
+      if (match && match[1]) {
+        const title = stripZsxqTitle(match[1]);
+
+        if (!isGenericZsxqTitle(title)) {
+          return title;
+        }
+      }
+    }
+
+    return "";
+  }
+
+  function isGenericZsxqTitle(value) {
+    const title = stripZsxqTitle(value);
+    const genericTitles = [
+      /^创建[\/／]管理的星球$/,
+      /^我加入的星球$/,
+      /^知识星球$/,
+      /^最新$/,
+      /^精华$/,
+      /^问答$/,
+      /^作业$/,
+      /^星球$/
+    ];
+
+    return !title || genericTitles.some((pattern) => pattern.test(title));
   }
 
   function stripZsxqTitle(value) {
@@ -593,7 +1043,11 @@
 
   if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (!message || !["EXTRACT_PAGE", "EXTRACT_ZHIHU_PAGE"].includes(message.type)) {
+      if (!message) {
+        return false;
+      }
+
+      if (!["EXTRACT_PAGE", "EXTRACT_ZHIHU_PAGE"].includes(message.type)) {
         return false;
       }
 

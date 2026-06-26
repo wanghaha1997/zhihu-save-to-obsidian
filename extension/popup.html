@@ -105,6 +105,15 @@
       <select id="candidate"></select>
     </div>
 
+    <div id="commentField" class="field hidden">
+      <div class="label">评论范围</div>
+      <select id="commentMode">
+        <option value="all">保存已显示评论</option>
+        <option value="author">仅保存已显示的答主回复</option>
+        <option value="none">不保存评论</option>
+      </select>
+    </div>
+
     <button id="save" type="button" disabled>保存到 Obsidian</button>
     <div id="status">正在读取当前页面...</div>
 

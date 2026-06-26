@@ -167,20 +167,97 @@ function normalizePayload(body) {
     author,
     url,
     html,
-    savedAt
+    savedAt,
+    planet: cleanText(body.planet),
+    publishedAt: cleanText(body.publishedAt),
+    comments: normalizeComments(body.comments)
   };
 }
 
+function normalizeComments(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((comment) => ({
+      author: cleanText(comment.author) || "未知评论者",
+      time: cleanText(comment.time),
+      text: typeof comment.text === "string" ? comment.text.trim() : "",
+      html: typeof comment.html === "string" ? comment.html : ""
+    }))
+    .filter((comment) => comment.text || comment.html);
+}
+
 function buildMarkdown(payload) {
-  const markdownBody = turndownService.turndown(payload.html).trim();
+  let markdownBody = turndownService.turndown(payload.html).trim();
+
+  if (payload.source === "zsxq") {
+    markdownBody = postProcessZsxqMarkdown(markdownBody, payload.planet);
+  }
+
+  const commentsSection = buildCommentsMarkdown(payload.comments);
   const savedDate = payload.savedAt.slice(0, 10);
   const title = escapeYamlValue(payload.title);
   const authorLink = createObsidianLink(payload.author);
   const author = escapeYamlValue(authorLink);
   const url = escapeYamlValue(payload.url);
   const sourceLabel = SOURCES[payload.source] || payload.source;
+  const planetLine = payload.planet ? `planet: ${escapeYamlValue(payload.planet)}\n` : "";
+  const publishedLine = payload.publishedAt ? `published_at: ${escapeYamlValue(payload.publishedAt.slice(0, 10))}\n` : "";
+  const planetTag = payload.planet ? `\n  - ${sanitizeYamlListItem(payload.planet)}` : "";
+  const intro = payload.source === "zsxq"
+    ? buildZsxqIntro(payload)
+    : `\n\n# ${payload.title}\n\n> 作者：${authorLink}\n> 原文：${payload.url}\n\n`;
 
-  return `---\ntitle: ${title}\nauthor: ${author}\nsource: ${sourceLabel}\nurl: ${url}\nsaved_at: ${savedDate}\ntags:\n  - ${sourceLabel}\n  - 待整理\n---\n\n# ${payload.title}\n\n> 作者：${authorLink}\n> 原文：${payload.url}\n\n${markdownBody}\n`;
+  return `---\ntitle: ${title}\nauthor: ${author}\nsource: ${sourceLabel}\n${planetLine}${publishedLine}url: ${url}\nsaved_at: ${savedDate}\ntags:\n  - ${sourceLabel}${planetTag}\n  - 待整理\n---${intro}${markdownBody}${commentsSection}`;
+}
+
+function buildZsxqIntro(payload) {
+  const authorLink = createObsidianLink(payload.author);
+  const parts = [authorLink];
+
+  if (payload.planet) {
+    parts.push(`[[${cleanObsidianLinkTarget(payload.planet)}]]`);
+  }
+
+  if (payload.publishedAt) {
+    parts.push(payload.publishedAt.slice(0, 10));
+  }
+
+  parts.push(`[原文](${payload.url})`);
+  return `\n\n> ${parts.join(" · ")}\n\n`;
+}
+
+function buildCommentsMarkdown(comments) {
+  if (!Array.isArray(comments) || comments.length === 0) {
+    return "";
+  }
+
+  const items = comments.map((comment) => {
+    const authorLink = createObsidianLink(comment.author);
+    const meta = comment.time ? `${authorLink} · ${comment.time}` : authorLink;
+    const body = comment.text || turndownService.turndown(comment.html || "").trim();
+    return `### ${meta}\n\n${body}`;
+  });
+
+  return `\n\n## 评论（${comments.length}）\n\n${items.join("\n\n---\n\n")}\n`;
+}
+
+function postProcessZsxqMarkdown(markdown, planet) {
+  let result = markdown
+    .replace(/知识星球([\u4e00-\u9fa5A-Za-z0-9·]+)/g, "[[$1]]")
+    .replace(/\s+-\s*(?=[\u4e00-\u9fa5A-Za-z])/g, "\n\n- ")
+    .replace(/([。！？])\s+(?=[\u4e00-\u9fa5A-Za-z0-9])/g, "$1\n\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  if (planet) {
+    const planetLink = `[[${cleanObsidianLinkTarget(planet)}]]`;
+    result = result.replace(new RegExp(planetLink, "g"), planetLink);
+  }
+
+  return result;
 }
 
 async function getAvailableFilePath(targetDir, title) {
@@ -238,6 +315,14 @@ function cleanObsidianLinkTarget(value) {
     .replace(/^\[\[/, "")
     .replace(/\]\]$/, "")
     .replace(/[#[\]^|]/g, "")
+    .trim();
+}
+
+function sanitizeYamlListItem(value) {
+  return cleanText(value)
+    .replace(/[\r\n]/g, " ")
+    .replace(/#/g, "")
+    .replace(/:/g, "")
     .trim();
 }
 
