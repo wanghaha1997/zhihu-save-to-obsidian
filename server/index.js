@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { execFile } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { promisify } from "node:util";
 
 import cors from "cors";
 import express from "express";
@@ -18,6 +20,7 @@ const PORT = 3721;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const CONFIG_PATH = path.join(PROJECT_ROOT, "config.json");
+const execFileAsync = promisify(execFile);
 const turndownService = new TurndownService({
   headingStyle: "atx",
   codeBlockStyle: "fenced"
@@ -76,6 +79,29 @@ app.post("/config", async (req, res, next) => {
     await fs.writeFile(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 
     console.log(`已更新保存目录：${targetDir}`);
+    res.json({
+      ok: true,
+      config: createConfigResponse(config)
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/select-folder", async (req, res, next) => {
+  try {
+    const currentConfig = await readConfig();
+    const vaultPath = await selectLocalFolder();
+    const config = normalizeConfig({
+      vaultPath,
+      saveFolder: cleanPathText(req.body?.saveFolder) || currentConfig.saveFolder
+    });
+    const targetDir = getTargetDir(config);
+
+    await fs.mkdir(targetDir, { recursive: true });
+    await fs.writeFile(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+
+    console.log(`已选择并更新保存目录：${targetDir}`);
     res.json({
       ok: true,
       config: createConfigResponse(config)
@@ -195,6 +221,35 @@ function createConfigResponse(config) {
     saveFolder: config.saveFolder,
     targetDir: getTargetDir(config)
   };
+}
+
+async function selectLocalFolder() {
+  if (process.platform !== "darwin") {
+    throw userError("当前版本仅支持在 macOS 上通过按钮选择文件夹");
+  }
+
+  try {
+    const { stdout } = await execFileAsync("osascript", [
+      "-e",
+      'set chosenFolder to choose folder with prompt "请选择 Obsidian Vault 文件夹"',
+      "-e",
+      "POSIX path of chosenFolder"
+    ]);
+
+    const folderPath = stdout.trim().replace(/\/+$/g, "");
+
+    if (!folderPath || !path.isAbsolute(folderPath)) {
+      throw userError("未选择有效的文件夹路径");
+    }
+
+    return folderPath;
+  } catch (error) {
+    if (error.message && error.message.includes("User canceled")) {
+      throw userError("已取消选择文件夹");
+    }
+
+    throw error;
+  }
 }
 
 function normalizePayload(body) {

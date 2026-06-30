@@ -1,11 +1,13 @@
 const SERVICE_BASE_URL = "http://127.0.0.1:3721";
 const SAVE_URL = `${SERVICE_BASE_URL}/save`;
 const CONFIG_URL = `${SERVICE_BASE_URL}/config`;
+const SELECT_FOLDER_URL = `${SERVICE_BASE_URL}/select-folder`;
 const titleElement = document.getElementById("title");
 const authorElement = document.getElementById("author");
 const urlElement = document.getElementById("url");
 const statusElement = document.getElementById("status");
 const saveButton = document.getElementById("save");
+const chooseVaultButton = document.getElementById("chooseVault");
 const saveConfigButton = document.getElementById("saveConfig");
 const candidateField = document.getElementById("candidateField");
 const candidateSelect = document.getElementById("candidate");
@@ -19,6 +21,7 @@ let selectedCandidate = null;
 
 document.addEventListener("DOMContentLoaded", init);
 saveButton.addEventListener("click", saveToObsidian);
+chooseVaultButton.addEventListener("click", chooseVaultFolder);
 saveConfigButton.addEventListener("click", saveConfig);
 candidateSelect.addEventListener("change", selectCandidate);
 commentModeSelect.addEventListener("change", updateCommentStatus);
@@ -118,6 +121,35 @@ async function loadConfig() {
     renderConfig(result.config);
   } catch (error) {
     targetDirElement.textContent = "未连接本地服务";
+  }
+}
+
+async function chooseVaultFolder() {
+  chooseVaultButton.disabled = true;
+  setStatus("正在打开文件夹选择窗口...");
+
+  try {
+    const response = await fetch(SELECT_FOLDER_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        saveFolder: saveFolderInput.value.trim()
+      })
+    });
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "选择文件夹失败");
+    }
+
+    renderConfig(result.config);
+    setStatus(`保存目录已更新：${result.config.targetDir}`, "success");
+  } catch (error) {
+    setStatus(`选择文件夹失败：${error.message}\n请确认 Node.js 服务已经启动。`, "error");
+  } finally {
+    chooseVaultButton.disabled = false;
   }
 }
 
