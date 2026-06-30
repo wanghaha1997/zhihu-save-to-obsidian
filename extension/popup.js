@@ -2,6 +2,7 @@ const SERVICE_BASE_URL = "http://127.0.0.1:3721";
 const SAVE_URL = `${SERVICE_BASE_URL}/save`;
 const CONFIG_URL = `${SERVICE_BASE_URL}/config`;
 const SELECT_FOLDER_URL = `${SERVICE_BASE_URL}/select-folder`;
+const ALL_CANDIDATES_ID = "__all_candidates__";
 const titleElement = document.getElementById("title");
 const authorElement = document.getElementById("author");
 const urlElement = document.getElementById("url");
@@ -50,7 +51,7 @@ async function init() {
     }
 
     const warningText = data.warnings && data.warnings.length ? `\n${data.warnings.join("\n")}` : "";
-    const candidateText = data.candidates && data.candidates.length > 1 ? `已找到 ${data.candidates.length} 段可保存内容，请选择其中一段。` : "已读取页面内容，可以保存。";
+    const candidateText = data.candidates && data.candidates.length > 1 ? `已找到 ${data.candidates.length} 段可保存内容，可以选择单条或全部保存。` : "已读取页面内容，可以保存。";
     setStatus(`${candidateText}${getCommentStatusSuffix()}${warningText}`);
     saveButton.disabled = false;
   } catch (error) {
@@ -65,48 +66,68 @@ async function init() {
 }
 
 async function saveToObsidian() {
-  if (!pageData || !selectedCandidate || !selectedCandidate.html) {
+  const candidatesToSave = getCandidatesToSave();
+
+  if (!pageData || candidatesToSave.length === 0) {
     setStatus("没有可保存的正文内容。", "error");
     return;
   }
 
   saveButton.disabled = true;
-  setStatus("正在保存...");
+  setStatus(candidatesToSave.length > 1 ? `正在保存 1/${candidatesToSave.length}...` : "正在保存...");
 
   try {
-    const saveCandidate = selectedCandidate;
-    const saveTitle = getCandidateTitle(pageData, selectedCandidate);
-    const comments = filterComments(saveCandidate.comments || [], commentModeSelect.value, saveCandidate.author);
+    const savedPaths = [];
 
-    const response = await fetch(SAVE_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        source: pageData.source,
-        title: saveTitle,
-        author: saveCandidate.author || pageData.author,
-        url: saveCandidate.url || pageData.url,
-        html: saveCandidate.html,
-        comments,
-        planet: pageData.planet || saveCandidate.planet || "",
-        publishedAt: saveCandidate.publishedAt || pageData.publishedAt || "",
-        savedAt: new Date().toISOString()
-      })
-    });
-    const result = await response.json();
+    for (let index = 0; index < candidatesToSave.length; index += 1) {
+      if (candidatesToSave.length > 1) {
+        setStatus(`正在保存 ${index + 1}/${candidatesToSave.length}...`);
+      }
 
-    if (!response.ok || !result.ok) {
-      throw new Error(result.error || "保存失败");
+      const result = await saveCandidateToObsidian(candidatesToSave[index]);
+      savedPaths.push(result.path);
     }
 
-    setStatus(`保存成功：${result.path}`, "success");
+    if (savedPaths.length === 1) {
+      setStatus(`保存成功：${savedPaths[0]}`, "success");
+    } else {
+      setStatus(`保存成功：${savedPaths.length} 条\n最后保存：${savedPaths[savedPaths.length - 1]}`, "success");
+    }
+
     saveButton.disabled = false;
   } catch (error) {
     setStatus(`保存失败：${error.message}\n请确认 Node.js 服务已经启动。`, "error");
     saveButton.disabled = false;
   }
+}
+
+async function saveCandidateToObsidian(saveCandidate) {
+  const saveTitle = getCandidateTitle(pageData, saveCandidate);
+  const comments = filterComments(saveCandidate.comments || [], commentModeSelect.value, saveCandidate.author);
+  const response = await fetch(SAVE_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      source: pageData.source,
+      title: saveTitle,
+      author: saveCandidate.author || pageData.author,
+      url: saveCandidate.url || pageData.url,
+      html: saveCandidate.html,
+      comments,
+      planet: pageData.planet || saveCandidate.planet || "",
+      publishedAt: saveCandidate.publishedAt || pageData.publishedAt || "",
+      savedAt: new Date().toISOString()
+    })
+  });
+  const result = await response.json();
+
+  if (!response.ok || !result.ok) {
+    throw new Error(result.error || `保存失败：${saveTitle}`);
+  }
+
+  return result;
 }
 
 async function loadConfig() {
@@ -198,6 +219,13 @@ function renderConfig(config) {
 }
 
 function renderPageData(data) {
+  if (isAllCandidatesSelected()) {
+    titleElement.textContent = `${data.title || "当前页面"}（全部 ${getAvailableCandidates(data).length} 条）`;
+    authorElement.textContent = "全部作者";
+    urlElement.textContent = data.url || "未能获取链接";
+    return;
+  }
+
   titleElement.textContent = getCandidateTitle(data, selectedCandidate) || "未能获取标题";
   authorElement.textContent = selectedCandidate && selectedCandidate.author ? selectedCandidate.author : data.author || "未能获取作者";
   urlElement.textContent = (selectedCandidate && selectedCandidate.url) || data.url || "未能获取链接";
@@ -225,6 +253,11 @@ function renderCandidateOptions(data) {
     return;
   }
 
+  const allOption = document.createElement("option");
+  allOption.value = ALL_CANDIDATES_ID;
+  allOption.textContent = `全部保存（${getAvailableCandidates(data).length} 条）`;
+  candidateSelect.appendChild(allOption);
+
   for (const candidate of candidates) {
     const option = document.createElement("option");
     option.value = candidate.id;
@@ -238,6 +271,14 @@ function renderCandidateOptions(data) {
 
 function selectCandidate() {
   if (!pageData || !Array.isArray(pageData.candidates)) {
+    return;
+  }
+
+  if (candidateSelect.value === ALL_CANDIDATES_ID) {
+    selectedCandidate = null;
+    renderPageData(pageData);
+    saveButton.disabled = getAvailableCandidates(pageData).length === 0;
+    setStatus(`已选择全部 ${getAvailableCandidates(pageData).length} 条内容，点击后会逐条保存。${getCommentStatusSuffix()}`);
     return;
   }
 
@@ -265,7 +306,7 @@ function renderCommentOptions(data) {
 }
 
 function updateCommentStatus() {
-  if (!selectedCandidate || !selectedCandidate.html) {
+  if (getCandidatesToSave().length === 0) {
     return;
   }
 
@@ -273,12 +314,13 @@ function updateCommentStatus() {
 }
 
 function getCommentStatusSuffix() {
-  if (!pageData || pageData.source !== "zsxq" || !selectedCandidate) {
+  if (!pageData || pageData.source !== "zsxq") {
     return "";
   }
 
-  const comments = Array.isArray(selectedCandidate.comments) ? selectedCandidate.comments : [];
-  const filtered = filterComments(comments, commentModeSelect.value, selectedCandidate.author);
+  const candidates = getCandidatesToSave();
+  const comments = candidates.flatMap((candidate) => Array.isArray(candidate.comments) ? candidate.comments : []);
+  const filtered = candidates.flatMap((candidate) => filterComments(candidate.comments || [], commentModeSelect.value, candidate.author));
 
   if (comments.length === 0) {
     return "\n当前页面未读取到已显示评论。";
@@ -334,6 +376,27 @@ function getInitialCandidate(data) {
   }
 
   return null;
+}
+
+function getCandidatesToSave() {
+  if (!pageData) {
+    return [];
+  }
+
+  if (isAllCandidatesSelected()) {
+    return getAvailableCandidates(pageData);
+  }
+
+  return selectedCandidate && selectedCandidate.html ? [selectedCandidate] : [];
+}
+
+function getAvailableCandidates(data) {
+  const candidates = Array.isArray(data.candidates) ? data.candidates : [];
+  return candidates.filter((candidate) => candidate && candidate.html);
+}
+
+function isAllCandidatesSelected() {
+  return candidateSelect.value === ALL_CANDIDATES_ID;
 }
 
 function setStatus(message, type) {
