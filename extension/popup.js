@@ -161,7 +161,7 @@ function renderCommentOptions(data) {
   }
 
   commentField.classList.remove("hidden");
-  commentModeSelect.value = "all";
+  commentModeSelect.value = "none";
 }
 
 function updateCommentStatus() {
