@@ -17,6 +17,7 @@
 - 试验支持财新文章页
 - 试验支持知识星球当前可见内容和页面已显示评论
 - 问题页支持从多个答主回答中选择其中一个保存
+- 可以在扩展弹窗里修改 Obsidian 保存目录
 - 自动转换为 Obsidian 友好的 Markdown
 - 文件重名时自动保留已有文件，生成新文件名
 
@@ -57,6 +58,8 @@ zhihu-save-to-obsidian/
     popup.js               # 弹窗交互和保存请求
   tests/
     content-extraction.test.mjs
+    config-validation.test.mjs
+    markdown-output.test.mjs
 ```
 
 ## 安装 Node.js 依赖
@@ -75,7 +78,7 @@ npm install
 
 安装完成后，终端里应该看到类似 `found 0 vulnerabilities` 的提示。
 
-## 修改 config.json
+## 修改保存路径
 
 复制配置示例：
 
@@ -108,6 +111,13 @@ cp config.example.json config.json
 - `vaultPath` 必须是绝对路径。
 - `saveFolder` 只能是 Vault 里面的相对目录，不要写成 `/Users/...`。
 - 路径和中文内容都会按 UTF-8 保存。
+
+启动本地服务后，也可以在 Chrome 扩展弹窗里展开“保存目录”，直接修改：
+
+- `Vault 路径`：Obsidian Vault 的绝对路径
+- `Vault 内文件夹`：Vault 里面的子文件夹，例如 `网页收藏`
+
+点击“保存路径设置”后会更新 `config.json`，不需要重启 Node.js 服务。
 
 ## 启动本地服务
 
@@ -154,8 +164,9 @@ curl http://127.0.0.1:3721/health
 4. 点击 Chrome 工具栏里的扩展图标。
 5. 弹窗里会显示标题、作者、原文链接。
 6. 如果当前问题页读取到多个回答，先在“选择要保存的回答/正文”下拉框里选择目标答主。
-7. 点击“保存到 Obsidian”。
-8. 成功后，弹窗会显示保存路径。
+7. 如需修改保存位置，展开“保存目录”，填写路径后点击“保存路径设置”。
+8. 点击“保存到 Obsidian”。
+9. 成功后，弹窗会显示保存路径。
 
 保存后的 Markdown 文件位置类似：
 
@@ -248,11 +259,13 @@ JSON 里不能有多余逗号，字符串必须使用英文双引号。
 
 ### 保存路径不对
 
-检查 `vaultPath` 是否是你的真实 Obsidian Vault 路径。服务会把文件保存到：
+可以在扩展弹窗里展开“保存目录”修改路径，也可以检查 `config.json` 里的 `vaultPath` 是否是你的真实 Obsidian Vault 路径。服务会把文件保存到：
 
 ```text
 vaultPath/saveFolder/文章标题.md
 ```
+
+如果在弹窗里更新失败，先确认 `npm start` 的服务仍在运行，并确认 `Vault 路径` 是绝对路径。
 
 ## 查看 Node.js 服务日志
 
@@ -275,6 +288,10 @@ npm test
 ```
 
 手动测试本地保存接口：
+
+```bash
+curl http://127.0.0.1:3721/config
+```
 
 ```bash
 curl -X POST http://127.0.0.1:3721/save \

@@ -1,23 +1,32 @@
-const SERVICE_URL = "http://127.0.0.1:3721/save";
+const SERVICE_BASE_URL = "http://127.0.0.1:3721";
+const SAVE_URL = `${SERVICE_BASE_URL}/save`;
+const CONFIG_URL = `${SERVICE_BASE_URL}/config`;
 const titleElement = document.getElementById("title");
 const authorElement = document.getElementById("author");
 const urlElement = document.getElementById("url");
 const statusElement = document.getElementById("status");
 const saveButton = document.getElementById("save");
+const saveConfigButton = document.getElementById("saveConfig");
 const candidateField = document.getElementById("candidateField");
 const candidateSelect = document.getElementById("candidate");
 const commentField = document.getElementById("commentField");
 const commentModeSelect = document.getElementById("commentMode");
+const vaultPathInput = document.getElementById("vaultPath");
+const saveFolderInput = document.getElementById("saveFolder");
+const targetDirElement = document.getElementById("targetDir");
 let pageData = null;
 let selectedCandidate = null;
 
 document.addEventListener("DOMContentLoaded", init);
 saveButton.addEventListener("click", saveToObsidian);
+saveConfigButton.addEventListener("click", saveConfig);
 candidateSelect.addEventListener("change", selectCandidate);
 commentModeSelect.addEventListener("change", updateCommentStatus);
 
 async function init() {
   try {
+    loadConfig();
+
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
     if (!tab || !tab.id) {
@@ -66,7 +75,7 @@ async function saveToObsidian() {
     const saveTitle = getCandidateTitle(pageData, selectedCandidate);
     const comments = filterComments(saveCandidate.comments || [], commentModeSelect.value, saveCandidate.author);
 
-    const response = await fetch(SERVICE_URL, {
+    const response = await fetch(SAVE_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -95,6 +104,65 @@ async function saveToObsidian() {
     setStatus(`保存失败：${error.message}\n请确认 Node.js 服务已经启动。`, "error");
     saveButton.disabled = false;
   }
+}
+
+async function loadConfig() {
+  try {
+    const response = await fetch(CONFIG_URL);
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "读取保存目录失败");
+    }
+
+    renderConfig(result.config);
+  } catch (error) {
+    targetDirElement.textContent = "未连接本地服务";
+  }
+}
+
+async function saveConfig() {
+  const vaultPath = vaultPathInput.value.trim();
+  const saveFolder = saveFolderInput.value.trim();
+
+  if (!vaultPath || !saveFolder) {
+    setStatus("请填写 Vault 路径和 Vault 内文件夹。", "error");
+    return;
+  }
+
+  saveConfigButton.disabled = true;
+  setStatus("正在更新保存目录...");
+
+  try {
+    const response = await fetch(CONFIG_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        vaultPath,
+        saveFolder
+      })
+    });
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "更新保存目录失败");
+    }
+
+    renderConfig(result.config);
+    setStatus(`保存目录已更新：${result.config.targetDir}`, "success");
+  } catch (error) {
+    setStatus(`保存目录更新失败：${error.message}\n请确认 Node.js 服务已经启动，并检查路径是否正确。`, "error");
+  } finally {
+    saveConfigButton.disabled = false;
+  }
+}
+
+function renderConfig(config) {
+  vaultPathInput.value = config.vaultPath || "";
+  saveFolderInput.value = config.saveFolder || "";
+  targetDirElement.textContent = config.targetDir || "未设置";
 }
 
 function renderPageData(data) {

@@ -34,13 +34,30 @@
         word-break: break-all;
       }
 
+      input,
       select {
         width: 100%;
         padding: 7px 8px;
         border: 1px solid #d0d7de;
         border-radius: 6px;
+        box-sizing: border-box;
         background: #ffffff;
         font-size: 13px;
+      }
+
+      input + .label {
+        margin-top: 8px;
+      }
+
+      details {
+        padding: 8px 0;
+        border-top: 1px solid #d8dee4;
+        border-bottom: 1px solid #d8dee4;
+      }
+
+      summary {
+        font-size: 13px;
+        cursor: pointer;
       }
 
       .hidden {
@@ -62,6 +79,17 @@
       button:disabled {
         cursor: not-allowed;
         background: #8c959f;
+      }
+
+      .secondary {
+        color: #24292f;
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+      }
+
+      .secondary:disabled {
+        color: #57606a;
+        background: #f6f8fa;
       }
 
       #status {
@@ -113,6 +141,21 @@
         <option value="author">仅保存已显示的答主回复</option>
       </select>
     </div>
+
+    <details class="field">
+      <summary>保存目录</summary>
+      <div class="field">
+        <div class="label">当前保存到</div>
+        <div id="targetDir" class="value">读取中...</div>
+      </div>
+      <div class="field">
+        <div class="label">Vault 路径</div>
+        <input id="vaultPath" type="text" placeholder="/Users/你的用户名/Documents/ObsidianVault">
+        <div class="label">Vault 内文件夹</div>
+        <input id="saveFolder" type="text" placeholder="网页收藏">
+        <button id="saveConfig" class="secondary" type="button">保存路径设置</button>
+      </div>
+    </details>
 
     <button id="save" type="button" disabled>保存到 Obsidian</button>
     <div id="status">正在读取当前页面...</div>

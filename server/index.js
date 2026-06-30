@@ -7,7 +7,9 @@ import express from "express";
 import TurndownService from "turndown";
 
 export {
-  buildMarkdown
+  buildMarkdown,
+  getTargetDir,
+  normalizeConfig
 };
 
 const app = express();
@@ -51,6 +53,36 @@ app.use(express.json({ limit: "10mb" }));
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/config", async (req, res, next) => {
+  try {
+    const config = await readConfig();
+    res.json({
+      ok: true,
+      config: createConfigResponse(config)
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/config", async (req, res, next) => {
+  try {
+    const config = normalizeConfig(req.body);
+    const targetDir = getTargetDir(config);
+
+    await fs.mkdir(targetDir, { recursive: true });
+    await fs.writeFile(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+
+    console.log(`已更新保存目录：${targetDir}`);
+    res.json({
+      ok: true,
+      config: createConfigResponse(config)
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.post("/save", async (req, res, next) => {
@@ -113,29 +145,56 @@ async function readConfig() {
     throw userError("config.json 不是合法 JSON，请检查逗号和引号");
   }
 
-  if (!config.vaultPath || typeof config.vaultPath !== "string") {
+  return normalizeConfig(config);
+}
+
+function normalizeConfig(body) {
+  if (!body || typeof body !== "object") {
+    throw userError("配置必须是 JSON 对象");
+  }
+
+  const vaultPath = cleanPathText(body.vaultPath);
+  const saveFolder = cleanPathText(body.saveFolder);
+
+  if (!vaultPath) {
     throw userError("config.json 缺少 vaultPath");
   }
 
-  if (!path.isAbsolute(config.vaultPath)) {
+  if (!path.isAbsolute(vaultPath)) {
     throw userError("config.json 的 vaultPath 必须是绝对路径");
   }
 
-  if (!config.saveFolder || typeof config.saveFolder !== "string") {
+  if (!saveFolder) {
     throw userError("config.json 缺少 saveFolder");
   }
 
-  return config;
-}
+  const normalizedSaveFolder = path.normalize(saveFolder).replace(/[\\/]+$/g, "");
 
-function getTargetDir(config) {
-  const saveFolder = path.normalize(config.saveFolder);
-
-  if (path.isAbsolute(saveFolder) || saveFolder.startsWith("..")) {
+  if (
+    path.isAbsolute(normalizedSaveFolder) ||
+    normalizedSaveFolder === "." ||
+    normalizedSaveFolder === ".." ||
+    normalizedSaveFolder.startsWith(`..${path.sep}`)
+  ) {
     throw userError("saveFolder 只能是 Vault 内的相对目录");
   }
 
-  return path.join(config.vaultPath, saveFolder);
+  return {
+    vaultPath,
+    saveFolder: normalizedSaveFolder
+  };
+}
+
+function getTargetDir(config) {
+  return path.join(config.vaultPath, config.saveFolder);
+}
+
+function createConfigResponse(config) {
+  return {
+    vaultPath: config.vaultPath,
+    saveFolder: config.saveFolder,
+    targetDir: getTargetDir(config)
+  };
 }
 
 function normalizePayload(body) {
@@ -290,6 +349,10 @@ function sanitizeFileName(fileName) {
 
 function cleanText(value) {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+}
+
+function cleanPathText(value) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function parseSavedAt(value) {
