@@ -18,6 +18,7 @@
 - 试验支持知识星球当前可见内容和页面已显示评论
 - 问题页和知识星球列表页支持选择单条内容，也支持全部保存
 - 可以在扩展弹窗里修改 Obsidian 保存目录，macOS 支持按钮选择 Vault 文件夹
+- 支持知乎、财新、知识星球分别保存到不同文件夹
 - 自动转换为 Obsidian 友好的 Markdown
 - 文件重名时自动保留已有文件，生成新文件名
 
@@ -91,18 +92,28 @@ cp config.example.json config.json
 ```json
 {
   "vaultPath": "/Users/你的用户名/Documents/ObsidianVault",
-  "saveFolder": "网页收藏"
+  "saveFolder": "网页收藏",
+  "sourceFolders": {
+    "zhihu": "知乎",
+    "caixin": "财新",
+    "zsxq": "知识星球"
+  }
 }
 ```
 
-把 `vaultPath` 改成你的 Obsidian Vault 真实路径。`saveFolder` 是 Vault 里面的子文件夹名称，服务会自动创建这个文件夹。
+把 `vaultPath` 改成你的 Obsidian Vault 真实路径。`sourceFolders` 是不同来源在 Vault 里面的子文件夹名称，服务会自动创建这些文件夹。`saveFolder` 是兜底目录，用于以后新增但还没有单独配置的来源。
 
 示例：
 
 ```json
 {
   "vaultPath": "/Users/ray/Documents/我的Obsidian",
-  "saveFolder": "网页收藏"
+  "saveFolder": "网页收藏",
+  "sourceFolders": {
+    "zhihu": "知乎",
+    "caixin": "财新",
+    "zsxq": "知识星球"
+  }
 }
 ```
 
@@ -110,12 +121,16 @@ cp config.example.json config.json
 
 - `vaultPath` 必须是绝对路径。
 - `saveFolder` 只能是 Vault 里面的相对目录，不要写成 `/Users/...`。
+- `sourceFolders` 里的每个文件夹也只能是 Vault 里面的相对目录。
 - 路径和中文内容都会按 UTF-8 保存。
 
 启动本地服务后，也可以在 Chrome 扩展弹窗里展开“保存目录”，直接修改：
 
 - `Vault 路径`：Obsidian Vault 的绝对路径
-- `Vault 内文件夹`：Vault 里面的子文件夹，例如 `网页收藏`
+- `Vault 内文件夹`：兜底子文件夹，例如 `网页收藏`
+- `知乎保存文件夹`：知乎内容默认保存的文件夹
+- `财新保存文件夹`：财新内容默认保存的文件夹
+- `知识星球保存文件夹`：知识星球内容默认保存的文件夹
 
 在 macOS 上，可以点击“选择并保存 Vault 文件夹”打开系统文件夹选择窗口。选中后会直接更新 `config.json`。
 
@@ -171,10 +186,12 @@ curl http://127.0.0.1:3721/health
 9. 点击“保存到 Obsidian”。
 10. 成功后，弹窗会显示保存路径。
 
-保存后的 Markdown 文件位置类似：
+保存后的 Markdown 文件位置会按来源区分，类似：
 
 ```text
-/Users/你的用户名/Documents/ObsidianVault/网页收藏/文章标题.md
+/Users/你的用户名/Documents/ObsidianVault/知乎/文章标题.md
+/Users/你的用户名/Documents/ObsidianVault/财新/文章标题.md
+/Users/你的用户名/Documents/ObsidianVault/知识星球/文章标题.md
 ```
 
 如果同名文件已经存在，服务会自动保存成：
@@ -254,7 +271,12 @@ curl http://127.0.0.1:3721/health
 ```json
 {
   "vaultPath": "/Users/ray/Documents/ObsidianVault",
-  "saveFolder": "网页收藏"
+  "saveFolder": "网页收藏",
+  "sourceFolders": {
+    "zhihu": "知乎",
+    "caixin": "财新",
+    "zsxq": "知识星球"
+  }
 }
 ```
 
@@ -265,7 +287,9 @@ JSON 里不能有多余逗号，字符串必须使用英文双引号。
 可以在扩展弹窗里展开“保存目录”修改路径，也可以检查 `config.json` 里的 `vaultPath` 是否是你的真实 Obsidian Vault 路径。服务会把文件保存到：
 
 ```text
-vaultPath/saveFolder/文章标题.md
+vaultPath/sourceFolders.zhihu/文章标题.md
+vaultPath/sourceFolders.caixin/文章标题.md
+vaultPath/sourceFolders.zsxq/文章标题.md
 ```
 
 如果在弹窗里更新失败，先确认 `npm start` 的服务仍在运行，并确认 `Vault 路径` 是绝对路径。

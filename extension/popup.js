@@ -16,9 +16,13 @@ const commentField = document.getElementById("commentField");
 const commentModeSelect = document.getElementById("commentMode");
 const vaultPathInput = document.getElementById("vaultPath");
 const saveFolderInput = document.getElementById("saveFolder");
+const zhihuFolderInput = document.getElementById("zhihuFolder");
+const caixinFolderInput = document.getElementById("caixinFolder");
+const zsxqFolderInput = document.getElementById("zsxqFolder");
 const targetDirElement = document.getElementById("targetDir");
 let pageData = null;
 let selectedCandidate = null;
+let currentConfig = null;
 
 document.addEventListener("DOMContentLoaded", init);
 saveButton.addEventListener("click", saveToObsidian);
@@ -44,6 +48,7 @@ async function init() {
     renderPageData(data);
     renderCandidateOptions(data);
     renderCommentOptions(data);
+    updateTargetDirDisplay();
 
     if (!selectedCandidate || !selectedCandidate.html) {
       setStatus("未能读取正文，暂时不能保存。", "error");
@@ -156,7 +161,8 @@ async function chooseVaultFolder() {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        saveFolder: saveFolderInput.value.trim()
+        saveFolder: saveFolderInput.value.trim(),
+        sourceFolders: getSourceFoldersFromInputs()
       })
     });
     const result = await response.json();
@@ -177,9 +183,10 @@ async function chooseVaultFolder() {
 async function saveConfig() {
   const vaultPath = vaultPathInput.value.trim();
   const saveFolder = saveFolderInput.value.trim();
+  const sourceFolders = getSourceFoldersFromInputs();
 
-  if (!vaultPath || !saveFolder) {
-    setStatus("请填写 Vault 路径和 Vault 内文件夹。", "error");
+  if (!vaultPath || !saveFolder || !sourceFolders.zhihu || !sourceFolders.caixin || !sourceFolders.zsxq) {
+    setStatus("请填写 Vault 路径、Vault 内文件夹，以及三个来源的保存文件夹。", "error");
     return;
   }
 
@@ -194,7 +201,8 @@ async function saveConfig() {
       },
       body: JSON.stringify({
         vaultPath,
-        saveFolder
+        saveFolder,
+        sourceFolders
       })
     });
     const result = await response.json();
@@ -213,9 +221,34 @@ async function saveConfig() {
 }
 
 function renderConfig(config) {
+  currentConfig = config;
   vaultPathInput.value = config.vaultPath || "";
   saveFolderInput.value = config.saveFolder || "";
-  targetDirElement.textContent = config.targetDir || "未设置";
+  zhihuFolderInput.value = config.sourceFolders?.zhihu || "知乎";
+  caixinFolderInput.value = config.sourceFolders?.caixin || "财新";
+  zsxqFolderInput.value = config.sourceFolders?.zsxq || "知识星球";
+  updateTargetDirDisplay();
+}
+
+function updateTargetDirDisplay() {
+  if (!currentConfig) {
+    return;
+  }
+
+  const source = pageData && pageData.source;
+  const targetDir = source && currentConfig.targetDirs?.[source]
+    ? currentConfig.targetDirs[source]
+    : currentConfig.targetDir;
+
+  targetDirElement.textContent = targetDir || "未设置";
+}
+
+function getSourceFoldersFromInputs() {
+  return {
+    zhihu: zhihuFolderInput.value.trim(),
+    caixin: caixinFolderInput.value.trim(),
+    zsxq: zsxqFolderInput.value.trim()
+  };
 }
 
 function renderPageData(data) {

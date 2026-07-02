@@ -30,6 +30,11 @@ const SOURCES = {
   caixin: "财新",
   zsxq: "知识星球"
 };
+const DEFAULT_SOURCE_FOLDERS = {
+  zhihu: "知乎",
+  caixin: "财新",
+  zsxq: "知识星球"
+};
 
 app.disable("x-powered-by");
 app.use(cors({
@@ -75,7 +80,7 @@ app.post("/config", async (req, res, next) => {
     const config = normalizeConfig(req.body);
     const targetDir = getTargetDir(config);
 
-    await fs.mkdir(targetDir, { recursive: true });
+    await createConfiguredFolders(config);
     await fs.writeFile(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 
     console.log(`已更新保存目录：${targetDir}`);
@@ -94,11 +99,12 @@ app.post("/select-folder", async (req, res, next) => {
     const vaultPath = await selectLocalFolder();
     const config = normalizeConfig({
       vaultPath,
-      saveFolder: cleanPathText(req.body?.saveFolder) || currentConfig.saveFolder
+      saveFolder: cleanPathText(req.body?.saveFolder) || currentConfig.saveFolder,
+      sourceFolders: req.body?.sourceFolders || currentConfig.sourceFolders
     });
     const targetDir = getTargetDir(config);
 
-    await fs.mkdir(targetDir, { recursive: true });
+    await createConfiguredFolders(config);
     await fs.writeFile(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 
     console.log(`已选择并更新保存目录：${targetDir}`);
@@ -115,7 +121,7 @@ app.post("/save", async (req, res, next) => {
   try {
     const payload = normalizePayload(req.body);
     const config = await readConfig();
-    const targetDir = getTargetDir(config);
+    const targetDir = getTargetDir(config, payload.source);
     await fs.mkdir(targetDir, { recursive: true });
 
     const markdown = buildMarkdown(payload);
@@ -194,33 +200,75 @@ function normalizeConfig(body) {
     throw userError("config.json 缺少 saveFolder");
   }
 
-  const normalizedSaveFolder = path.normalize(saveFolder).replace(/[\\/]+$/g, "");
-
-  if (
-    path.isAbsolute(normalizedSaveFolder) ||
-    normalizedSaveFolder === "." ||
-    normalizedSaveFolder === ".." ||
-    normalizedSaveFolder.startsWith(`..${path.sep}`)
-  ) {
-    throw userError("saveFolder 只能是 Vault 内的相对目录");
-  }
+  const normalizedSaveFolder = normalizeRelativeFolder(saveFolder, "saveFolder");
+  const sourceFolders = normalizeSourceFolders(body.sourceFolders, normalizedSaveFolder);
 
   return {
     vaultPath,
-    saveFolder: normalizedSaveFolder
+    saveFolder: normalizedSaveFolder,
+    sourceFolders
   };
 }
 
-function getTargetDir(config) {
-  return path.join(config.vaultPath, config.saveFolder);
+function getTargetDir(config, source) {
+  const saveFolder = source && config.sourceFolders?.[source]
+    ? config.sourceFolders[source]
+    : config.saveFolder;
+
+  return path.join(config.vaultPath, saveFolder);
 }
 
 function createConfigResponse(config) {
+  const targetDirs = {};
+
+  for (const source of Object.keys(SOURCES)) {
+    targetDirs[source] = getTargetDir(config, source);
+  }
+
   return {
     vaultPath: config.vaultPath,
     saveFolder: config.saveFolder,
-    targetDir: getTargetDir(config)
+    sourceFolders: config.sourceFolders,
+    targetDir: getTargetDir(config),
+    targetDirs
   };
+}
+
+async function createConfiguredFolders(config) {
+  await fs.mkdir(getTargetDir(config), { recursive: true });
+
+  for (const source of Object.keys(SOURCES)) {
+    await fs.mkdir(getTargetDir(config, source), { recursive: true });
+  }
+}
+
+function normalizeSourceFolders(value, fallbackFolder) {
+  const sourceFolders = {};
+
+  for (const source of Object.keys(SOURCES)) {
+    const folder = value && typeof value === "object" && value[source]
+      ? value[source]
+      : DEFAULT_SOURCE_FOLDERS[source] || fallbackFolder;
+    sourceFolders[source] = normalizeRelativeFolder(folder, `sourceFolders.${source}`);
+  }
+
+  return sourceFolders;
+}
+
+function normalizeRelativeFolder(value, fieldName) {
+  const normalizedFolder = path.normalize(cleanPathText(value)).replace(/[\\/]+$/g, "");
+
+  if (
+    path.isAbsolute(normalizedFolder) ||
+    normalizedFolder === "" ||
+    normalizedFolder === "." ||
+    normalizedFolder === ".." ||
+    normalizedFolder.startsWith(`..${path.sep}`)
+  ) {
+    throw userError(`${fieldName} 只能是 Vault 内的相对目录`);
+  }
+
+  return normalizedFolder;
 }
 
 async function selectLocalFolder() {

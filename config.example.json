@@ -1,4 +1,9 @@
 {
   "vaultPath": "/Users/用户名/Documents/ObsidianVault",
-  "saveFolder": "网页收藏"
+  "saveFolder": "网页收藏",
+  "sourceFolders": {
+    "zhihu": "知乎",
+    "caixin": "财新",
+    "zsxq": "知识星球"
+  }
 }

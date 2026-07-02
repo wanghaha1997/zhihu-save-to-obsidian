@@ -10,11 +10,43 @@ const config = normalizeConfig({
 
 assert.deepEqual(config, {
   vaultPath: "/Users/ray/Documents/My Vault",
-  saveFolder: "网页收藏"
+  saveFolder: "网页收藏",
+  sourceFolders: {
+    zhihu: "知乎",
+    caixin: "财新",
+    zsxq: "知识星球"
+  }
 });
 assert.equal(
   getTargetDir(config),
   path.join("/Users/ray/Documents/My Vault", "网页收藏")
+);
+assert.equal(
+  getTargetDir(config, "zhihu"),
+  path.join("/Users/ray/Documents/My Vault", "知乎")
+);
+
+const sourceConfig = normalizeConfig({
+  vaultPath: "/Users/ray/Documents/My Vault",
+  saveFolder: "网页收藏",
+  sourceFolders: {
+    zhihu: "内容/知乎",
+    caixin: "内容/财新",
+    zsxq: "内容/知识星球/"
+  }
+});
+
+assert.equal(
+  getTargetDir(sourceConfig, "zhihu"),
+  path.join("/Users/ray/Documents/My Vault", "内容/知乎")
+);
+assert.equal(
+  getTargetDir(sourceConfig, "caixin"),
+  path.join("/Users/ray/Documents/My Vault", "内容/财新")
+);
+assert.equal(
+  getTargetDir(sourceConfig, "zsxq"),
+  path.join("/Users/ray/Documents/My Vault", "内容/知识星球")
 );
 
 assert.throws(
@@ -28,6 +60,18 @@ assert.throws(
 assert.throws(
   () => normalizeConfig({ vaultPath: "/Users/ray/Documents/Vault", saveFolder: "/tmp" }),
   /saveFolder 只能是 Vault 内的相对目录/
+);
+assert.throws(
+  () => normalizeConfig({
+    vaultPath: "/Users/ray/Documents/Vault",
+    saveFolder: "网页收藏",
+    sourceFolders: {
+      zhihu: "../知乎",
+      caixin: "财新",
+      zsxq: "知识星球"
+    }
+  }),
+  /sourceFolders.zhihu 只能是 Vault 内的相对目录/
 );
 
 console.log("config validation tests passed");
