@@ -52,6 +52,9 @@ zhihu-save-to-obsidian/
   package.json             # Node.js 依赖和启动命令
   server/
     index.js               # 本地 Express 服务
+  scripts/
+    install-launch-agent.sh
+    uninstall-launch-agent.sh
   extension/
     manifest.json          # Chrome Extension Manifest V3
     content.js             # 读取支持网站页面内容
@@ -157,6 +160,38 @@ curl http://127.0.0.1:3721/health
 ```
 
 如果返回 `{"ok":true}`，说明服务正常。
+
+## 设置开机自动启动
+
+macOS 可以把本地 Node.js 服务安装成当前用户的 LaunchAgent。安装后，每次登录电脑都会自动启动服务。
+
+在项目目录运行：
+
+```bash
+chmod +x scripts/install-launch-agent.sh scripts/uninstall-launch-agent.sh
+./scripts/install-launch-agent.sh
+```
+
+安装成功后，可以检查服务是否正常：
+
+```bash
+curl http://127.0.0.1:3721/health
+```
+
+如果返回 `{"ok":true}`，说明后台服务已经启动。
+
+后台服务日志在：
+
+```text
+logs/server.out.log
+logs/server.err.log
+```
+
+如果以后不想开机自动启动，可以运行：
+
+```bash
+./scripts/uninstall-launch-agent.sh
+```
 
 ## 加载 Chrome 扩展
 
@@ -302,7 +337,14 @@ vaultPath/sourceFolders.zsxq/文章标题.md
 
 ## 查看 Node.js 服务日志
 
-启动服务的那个终端窗口就是日志窗口。
+如果是手动运行 `npm start`，启动服务的那个终端窗口就是日志窗口。
+
+如果已经安装开机自启动，日志在：
+
+```text
+logs/server.out.log
+logs/server.err.log
+```
 
 保存成功时会显示：
 
