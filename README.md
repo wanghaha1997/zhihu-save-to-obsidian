@@ -1,6 +1,6 @@
-# 保存到 Obsidian
+# 中文网页保存到 Obsidian
 
-[![Tests](https://github.com/wanghaha1997/zhihu-save-to-obsidian/actions/workflows/test.yml/badge.svg)](https://github.com/wanghaha1997/zhihu-save-to-obsidian/actions/workflows/test.yml)
+[![Tests](https://github.com/wanghaha1997/chinese-web-to-obsidian/actions/workflows/test.yml/badge.svg)](https://github.com/wanghaha1997/chinese-web-to-obsidian/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Local First](https://img.shields.io/badge/data-local--first-5B5FC7)](#隐私说明)
@@ -28,13 +28,13 @@
 | 财新 | 当前已打开并显示的文章 | 不绕过订阅或权限限制 |
 | 知识星球 | 当前可见主题、已显示评论 | 默认不保存评论，可在弹窗中选择 |
 
-网站页面结构可能调整。如果提取失效，请提交 [Bug 报告](https://github.com/wanghaha1997/zhihu-save-to-obsidian/issues/new?template=bug_report.yml)，并提供脱敏后的页面类型和复现步骤，不要上传 Cookie、Token、付费正文或个人隐私信息。
+网站页面结构可能调整。如果提取失效，请提交 [Bug 报告](https://github.com/wanghaha1997/chinese-web-to-obsidian/issues/new?template=bug_report.yml)，并提供脱敏后的页面类型和复现步骤，不要上传 Cookie、Token、付费正文或个人隐私信息。
 
 ## 三步开始
 
 ```bash
-git clone https://github.com/wanghaha1997/zhihu-save-to-obsidian.git
-cd zhihu-save-to-obsidian
+git clone https://github.com/wanghaha1997/chinese-web-to-obsidian.git
+cd chinese-web-to-obsidian
 npm install
 cp config.example.json config.json
 ```
@@ -85,7 +85,7 @@ Chrome 当前支持的网站页面
 ## 项目结构
 
 ```text
-zhihu-save-to-obsidian/
+chinese-web-to-obsidian/
   config.json              # 本地保存配置
   config.example.json      # 配置示例
   package.json             # Node.js 依赖和启动命令
@@ -112,7 +112,7 @@ zhihu-save-to-obsidian/
 克隆项目后，进入项目目录：
 
 ```bash
-cd zhihu-save-to-obsidian
+cd chinese-web-to-obsidian
 ```
 
 安装依赖：
@@ -244,10 +244,10 @@ logs/server.err.log
 本机路径示例：
 
 ```text
-你的项目目录/zhihu-save-to-obsidian/extension
+你的项目目录/chinese-web-to-obsidian/extension
 ```
 
-加载成功后，Chrome 工具栏会出现“保存到 Obsidian”。如果没看到，可以点击工具栏右侧的拼图图标，把扩展固定出来。
+加载成功后，Chrome 工具栏会出现“中文网页保存到 Obsidian”。如果没看到，可以点击工具栏右侧的拼图图标，把扩展固定出来。
 
 ## 使用方法
 

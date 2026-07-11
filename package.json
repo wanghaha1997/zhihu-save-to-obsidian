@@ -1,15 +1,15 @@
 {
-  "name": "zhihu-save-to-obsidian",
-  "version": "0.7.0",
+  "name": "chinese-web-to-obsidian",
+  "version": "0.8.0",
   "private": true,
   "description": "Save rendered Zhihu, Caixin, and Zsxq content to a local Obsidian vault.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wanghaha1997/zhihu-save-to-obsidian.git"
+    "url": "git+https://github.com/wanghaha1997/chinese-web-to-obsidian.git"
   },
-  "homepage": "https://github.com/wanghaha1997/zhihu-save-to-obsidian#readme",
+  "homepage": "https://github.com/wanghaha1997/chinese-web-to-obsidian#readme",
   "bugs": {
-    "url": "https://github.com/wanghaha1997/zhihu-save-to-obsidian/issues"
+    "url": "https://github.com/wanghaha1997/chinese-web-to-obsidian/issues"
   },
   "license": "MIT",
   "keywords": [

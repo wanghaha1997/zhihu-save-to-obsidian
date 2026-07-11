@@ -4,19 +4,19 @@
 
 ## 项目名称
 
-Save to Obsidian / 保存到 Obsidian
+Chinese Web to Obsidian / 中文网页保存到 Obsidian
 
 ## GitHub 仓库
 
-https://github.com/wanghaha1997/zhihu-save-to-obsidian
+https://github.com/wanghaha1997/chinese-web-to-obsidian
 
 ## Brief description of the project
 
-Save to Obsidian is a local-first, open-source Chrome extension and Node.js service for saving rendered content from Chinese knowledge platforms into an Obsidian vault as structured Markdown. It currently supports Zhihu answers and articles, Caixin articles, and visible Zsxq posts. Users can select a single item or save all visible candidates, route each source to a separate folder, and connect notes by author through Obsidian internal links. The service listens only on 127.0.0.1 and does not use site cookies or internal APIs.
+Chinese Web to Obsidian is a local-first, open-source Chrome extension and Node.js service for saving rendered content from Chinese knowledge platforms into an Obsidian vault as structured Markdown. It currently supports Zhihu answers and articles, Caixin articles, and visible Zsxq posts. Users can select a single item or save all visible candidates, route each source to a separate folder, and connect notes by author through Obsidian internal links. The service listens only on 127.0.0.1 and does not use site cookies or internal APIs.
 
 ## 项目中文简介
 
-“保存到 Obsidian”是一个本地优先的开源 Chrome 扩展和 Node.js 服务，用于把中文知识网站中当前已经显示的内容保存为结构化 Markdown。目前支持知乎回答与专栏、财新文章和知识星球可见主题。它可以选择单条内容、按来源自动归档，并用 Obsidian 内部链接关联同一作者的笔记。服务只监听本机地址，不读取网站 Cookie，也不调用网站内部接口。
+“中文网页保存到 Obsidian”是一个本地优先的开源 Chrome 扩展和 Node.js 服务，用于把中文知识网站中当前已经显示的内容保存为结构化 Markdown。目前支持知乎回答与专栏、财新文章和知识星球可见主题。它可以选择单条内容、按来源自动归档，并用 Obsidian 内部链接关联同一作者的笔记。服务只监听本机地址，不读取网站 Cookie，也不调用网站内部接口。
 
 ## Why does this repository qualify?
 
