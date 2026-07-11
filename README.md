@@ -1,10 +1,49 @@
 # 保存到 Obsidian
 
-本地优先的中文内容 Markdown 保存工具。
+[![Tests](https://github.com/wanghaha1997/zhihu-save-to-obsidian/actions/workflows/test.yml/badge.svg)](https://github.com/wanghaha1997/zhihu-save-to-obsidian/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
+[![Local First](https://img.shields.io/badge/data-local--first-5B5FC7)](#隐私说明)
+
+一个本地优先的 Chrome 扩展，把知乎、财新和知识星球中当前已经显示的内容保存为结构清晰、可关联作者的 Obsidian Markdown 笔记。
 
 这个项目由一个 Chrome 扩展和一个本地 Node.js 服务组成，可以把当前浏览器里已经打开并渲染完成的知乎文章、回答、专栏页面，财新文章页面，以及知识星球内容保存为 Markdown 文件，并写入本地 Obsidian Vault。
 
 > English: Save rendered Chinese web articles and answers to a local Obsidian vault as Markdown.
+
+![在知乎页面选择一条回答保存](assets/screenshots/popup-select-answer.png)
+
+## 为什么使用它
+
+- **选对内容再保存**：知乎问题页和知识星球列表页可选择单条内容，也可一次保存当前页面的全部候选内容。
+- **适合 Obsidian 整理**：保留标题、作者、来源和原文链接，作者会写成 `[[内部链接]]`，便于关联同一作者的其他笔记。
+- **不同来源自动归档**：知乎、财新、知识星球可以分别设置默认文件夹。
+- **内容留在本机**：扩展只把当前页面已显示的内容发送到 `127.0.0.1` 本地服务，不依赖云端剪藏服务。
+
+## 支持范围
+
+| 网站 | 当前支持 | 说明 |
+| --- | --- | --- |
+| 知乎 | 问题回答、专栏文章 | 支持选择单个回答或全部保存 |
+| 财新 | 当前已打开并显示的文章 | 不绕过订阅或权限限制 |
+| 知识星球 | 当前可见主题、已显示评论 | 默认不保存评论，可在弹窗中选择 |
+
+网站页面结构可能调整。如果提取失效，请提交 [Bug 报告](https://github.com/wanghaha1997/zhihu-save-to-obsidian/issues/new?template=bug_report.yml)，并提供脱敏后的页面类型和复现步骤，不要上传 Cookie、Token、付费正文或个人隐私信息。
+
+## 三步开始
+
+```bash
+git clone https://github.com/wanghaha1997/zhihu-save-to-obsidian.git
+cd zhihu-save-to-obsidian
+npm install
+cp config.example.json config.json
+```
+
+1. 修改 `config.json` 中的 `vaultPath`，然后运行 `npm start`。
+2. 打开 `chrome://extensions/`，开启开发者模式，加载项目中的 `extension` 文件夹。
+3. 打开受支持的网页，点击扩展图标，再点击“保存到 Obsidian”。
+
+第一次使用建议继续阅读下面的[保存路径配置](#修改保存路径)和[完整扩展加载步骤](#加载-chrome-扩展)。
 
 ## 特点
 
@@ -66,6 +105,8 @@ zhihu-save-to-obsidian/
     markdown-output.test.mjs
 ```
 
+项目维护计划见 [ROADMAP.md](ROADMAP.md)，参与开发前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
 ## 安装 Node.js 依赖
 
 克隆项目后，进入项目目录：
@@ -110,7 +151,7 @@ cp config.example.json config.json
 
 ```json
 {
-  "vaultPath": "/Users/ray/Documents/我的Obsidian",
+  "vaultPath": "/Users/你的用户名/Documents/我的Obsidian",
   "saveFolder": "网页收藏",
   "sourceFolders": {
     "zhihu": "知乎",
@@ -305,7 +346,7 @@ curl http://127.0.0.1:3721/health
 
 ```json
 {
-  "vaultPath": "/Users/ray/Documents/ObsidianVault",
+  "vaultPath": "/Users/你的用户名/Documents/ObsidianVault",
   "saveFolder": "网页收藏",
   "sourceFolders": {
     "zhihu": "知乎",
@@ -417,4 +458,4 @@ curl -X POST http://127.0.0.1:3721/save \
 
 ## License
 
-MIT
+[MIT](LICENSE)

@@ -1,0 +1,54 @@
+name: Bug 报告
+description: 报告内容提取、保存或配置问题
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请勿提交 Cookie、Token、密码、付费正文或个人隐私信息。
+  - type: dropdown
+    id: site
+    attributes:
+      label: 出现问题的网站
+      options:
+        - 知乎问题回答
+        - 知乎专栏
+        - 财新
+        - 知识星球
+        - 本地服务或保存路径
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题描述
+      description: 请说明预期结果和实际结果。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开...
+        2. 点击...
+        3. 看到...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 扩展版本
+      placeholder: 例如 0.7.0
+  - type: input
+    id: environment
+    attributes:
+      label: 运行环境
+      placeholder: 例如 macOS 15、Chrome 版本、Node.js 版本
+  - type: textarea
+    id: logs
+    attributes:
+      label: 脱敏后的错误信息
+      description: 请删除本地用户名、Vault 路径、正文和任何凭证。

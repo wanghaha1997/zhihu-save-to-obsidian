@@ -2,7 +2,15 @@
   "name": "zhihu-save-to-obsidian",
   "version": "0.7.0",
   "private": true,
-  "description": "Save rendered Zhihu articles and answers to a local Obsidian vault.",
+  "description": "Save rendered Zhihu, Caixin, and Zsxq content to a local Obsidian vault.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wanghaha1997/zhihu-save-to-obsidian.git"
+  },
+  "homepage": "https://github.com/wanghaha1997/zhihu-save-to-obsidian#readme",
+  "bugs": {
+    "url": "https://github.com/wanghaha1997/zhihu-save-to-obsidian/issues"
+  },
   "license": "MIT",
   "keywords": [
     "zhihu",
@@ -11,6 +19,9 @@
     "chrome-extension"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "start": "node server/index.js",
     "test": "node tests/content-extraction.test.mjs && node tests/markdown-output.test.mjs && node tests/config-validation.test.mjs"

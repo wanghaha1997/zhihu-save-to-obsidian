@@ -1,0 +1,26 @@
+name: 功能建议
+description: 建议一个与本地网页保存相关的改进
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景
+      description: 你现在遇到了什么具体问题？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 希望扩展如何工作？
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隐私确认
+      options:
+        - label: 这个建议不要求上传 Cookie、Token、密码或用户保存的正文到外部服务。
+          required: true
