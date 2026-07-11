@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 
-const outputDir = path.resolve("extension/icons");
+const outputDir = path.resolve(process.env.ICON_OUTPUT_DIR || "extension/icons");
 const sizes = [16, 32, 48, 128];
 
 fs.mkdirSync(outputDir, { recursive: true });
@@ -21,18 +21,20 @@ function renderIcon(size) {
   const high = createImage(highSize, highSize);
   const s = highSize / 128;
 
-  drawRoundedRect(high, 4 * s, 4 * s, 120 * s, 120 * s, 22 * s, [23, 19, 48, 255], [64, 42, 117, 255]);
-  drawRoundedRect(high, 12 * s, 18 * s, 54 * s, 92 * s, 14 * s, [15, 102, 240, 255], [44, 137, 255, 255]);
-  drawSpeechTail(high, s);
+  drawRoundedRect(high, 4 * s, 4 * s, 120 * s, 120 * s, 22 * s, [14, 18, 58, 255], [24, 18, 78, 255]);
+  drawRoundedRect(high, 14 * s, 20 * s, 58 * s, 92 * s, 12 * s, [15, 115, 249, 255], [7, 82, 222, 255]);
+  drawPageFold(high, s);
 
-  drawLine(high, 25 * s, 43 * s, 54 * s, 43 * s, 8 * s, [255, 255, 255, 245]);
-  drawLine(high, 54 * s, 43 * s, 29 * s, 83 * s, 8 * s, [255, 255, 255, 245]);
-  drawLine(high, 27 * s, 83 * s, 57 * s, 83 * s, 8 * s, [255, 255, 255, 245]);
-  drawLine(high, 31 * s, 63 * s, 51 * s, 63 * s, 5 * s, [255, 255, 255, 210]);
+  drawRoundedRect(high, 23 * s, 35 * s, 22 * s, 17 * s, 4 * s, [255, 255, 255, 250], [245, 247, 255, 250]);
+  drawLine(high, 23 * s, 62 * s, 54 * s, 62 * s, 5 * s, [255, 255, 255, 245]);
+  drawLine(high, 23 * s, 72 * s, 48 * s, 72 * s, 5 * s, [255, 255, 255, 235]);
+  drawLine(high, 23 * s, 82 * s, 39 * s, 82 * s, 5 * s, [255, 255, 255, 225]);
+
+  drawLine(high, 55 * s, 84 * s, 55 * s, 102 * s, 7 * s, [255, 255, 255, 250]);
+  drawLine(high, 45 * s, 94 * s, 55 * s, 104 * s, 7 * s, [255, 255, 255, 250]);
+  drawLine(high, 65 * s, 94 * s, 55 * s, 104 * s, 7 * s, [255, 255, 255, 250]);
 
   drawCrystal(high, s);
-  drawLine(high, 66 * s, 95 * s, 99 * s, 104 * s, 3 * s, [255, 255, 255, 90]);
-  drawLine(high, 98 * s, 104 * s, 112 * s, 91 * s, 3 * s, [255, 255, 255, 80]);
 
   return downsample(high, size, scale);
 }
@@ -45,51 +47,51 @@ function createImage(width, height) {
   };
 }
 
-function drawSpeechTail(image, s) {
+function drawPageFold(image, s) {
   fillPolygon(image, [
-    [51 * s, 102 * s],
-    [68 * s, 113 * s],
-    [61 * s, 91 * s]
-  ], [36, 121, 245, 255]);
+    [53 * s, 20 * s],
+    [72 * s, 39 * s],
+    [53 * s, 39 * s]
+  ], [157, 193, 255, 255]);
 }
 
 function drawCrystal(image, s) {
   fillPolygon(image, [
-    [85 * s, 21 * s],
-    [112 * s, 52 * s],
-    [101 * s, 101 * s],
-    [70 * s, 109 * s],
-    [61 * s, 57 * s]
+    [89 * s, 20 * s],
+    [114 * s, 49 * s],
+    [103 * s, 105 * s],
+    [73 * s, 112 * s],
+    [64 * s, 55 * s]
   ], [107, 70, 193, 255]);
   fillPolygon(image, [
-    [85 * s, 21 * s],
-    [92 * s, 57 * s],
-    [61 * s, 57 * s]
+    [89 * s, 20 * s],
+    [94 * s, 58 * s],
+    [64 * s, 55 * s]
   ], [197, 177, 255, 255]);
   fillPolygon(image, [
-    [85 * s, 21 * s],
-    [112 * s, 52 * s],
-    [92 * s, 57 * s]
+    [89 * s, 20 * s],
+    [114 * s, 49 * s],
+    [94 * s, 58 * s]
   ], [151, 113, 255, 255]);
   fillPolygon(image, [
-    [92 * s, 57 * s],
-    [112 * s, 52 * s],
-    [101 * s, 101 * s]
+    [94 * s, 58 * s],
+    [114 * s, 49 * s],
+    [103 * s, 105 * s]
   ], [88, 54, 168, 255]);
   fillPolygon(image, [
-    [61 * s, 57 * s],
-    [92 * s, 57 * s],
-    [70 * s, 109 * s]
+    [64 * s, 55 * s],
+    [94 * s, 58 * s],
+    [73 * s, 112 * s]
   ], [126, 83, 221, 255]);
   fillPolygon(image, [
-    [92 * s, 57 * s],
-    [101 * s, 101 * s],
-    [70 * s, 109 * s]
+    [94 * s, 58 * s],
+    [103 * s, 105 * s],
+    [73 * s, 112 * s]
   ], [55, 35, 111, 255]);
 
-  drawLine(image, 85 * s, 22 * s, 92 * s, 57 * s, 2 * s, [255, 255, 255, 100]);
-  drawLine(image, 62 * s, 57 * s, 92 * s, 57 * s, 2 * s, [255, 255, 255, 80]);
-  drawLine(image, 92 * s, 57 * s, 101 * s, 100 * s, 2 * s, [255, 255, 255, 70]);
+  drawLine(image, 89 * s, 21 * s, 94 * s, 58 * s, 2 * s, [255, 255, 255, 100]);
+  drawLine(image, 65 * s, 55 * s, 94 * s, 58 * s, 2 * s, [255, 255, 255, 80]);
+  drawLine(image, 94 * s, 58 * s, 103 * s, 104 * s, 2 * s, [255, 255, 255, 70]);
 }
 
 function drawRoundedRect(image, x, y, width, height, radius, topColor, bottomColor) {

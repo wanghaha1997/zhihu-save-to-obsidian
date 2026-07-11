@@ -1,5 +1,9 @@
 # 中文网页保存到 Obsidian
 
+<p align="center">
+  <img src="assets/chinese-web-to-obsidian-logo.png" alt="中文网页保存到 Obsidian logo" width="144">
+</p>
+
 [![Tests](https://github.com/wanghaha1997/chinese-web-to-obsidian/actions/workflows/test.yml/badge.svg)](https://github.com/wanghaha1997/chinese-web-to-obsidian/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
@@ -427,10 +431,6 @@ curl -X POST http://127.0.0.1:3721/save \
 ### 扩展弹窗
 
 ![扩展弹窗：选择要保存的知乎回答](assets/screenshots/popup-select-answer.png)
-
-### Chrome 工具栏
-
-![Chrome 工具栏中的扩展](assets/screenshots/extension-toolbar.png)
 
 ### Obsidian 保存结果
 
