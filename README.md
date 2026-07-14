@@ -4,7 +4,15 @@
   <img src="assets/chinese-web-to-obsidian-logo.png" alt="中文网页保存到 Obsidian logo" width="144">
 </p>
 
+<p align="center">
+  <a href="README_EN.md">English</a> ·
+  <a href="CHANGELOG.md">更新记录</a> ·
+  <a href="PRIVACY.md">隐私政策</a> ·
+  <a href="SECURITY.md">安全说明</a>
+</p>
+
 [![Tests](https://github.com/wanghaha1997/chinese-web-to-obsidian/actions/workflows/test.yml/badge.svg)](https://github.com/wanghaha1997/chinese-web-to-obsidian/actions/workflows/test.yml)
+[![Release](https://img.shields.io/github/v/release/wanghaha1997/chinese-web-to-obsidian)](https://github.com/wanghaha1997/chinese-web-to-obsidian/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)](extension/manifest.json)
 [![Local First](https://img.shields.io/badge/data-local--first-5B5FC7)](#隐私说明)
@@ -109,7 +117,7 @@ chinese-web-to-obsidian/
     markdown-output.test.mjs
 ```
 
-项目维护计划见 [ROADMAP.md](ROADMAP.md)，参与开发前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+项目维护计划见 [ROADMAP.md](ROADMAP.md)，参与开发前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。项目如何使用 Codex 进行开源维护，见 [Maintaining with Codex](docs/MAINTAINING_WITH_CODEX.md)。
 
 ## 安装 Node.js 依赖
 
