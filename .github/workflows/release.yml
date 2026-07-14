@@ -50,13 +50,20 @@ jobs:
           (cd dist && sha256sum "${archive}" > "${archive}.sha256")
           echo "archive=${archive}" >> "${GITHUB_OUTPUT}"
 
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            "dist/${{ steps.package.outputs.archive }}#Chrome extension ZIP" \
-            "dist/${{ steps.package.outputs.archive }}.sha256#SHA256 checksum" \
-            --title "Chinese Web to Obsidian ${GITHUB_REF_NAME}" \
-            --generate-notes \
-            --verify-tag
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" \
+              "dist/${{ steps.package.outputs.archive }}#Chrome extension ZIP" \
+              "dist/${{ steps.package.outputs.archive }}.sha256#SHA256 checksum" \
+              --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              "dist/${{ steps.package.outputs.archive }}#Chrome extension ZIP" \
+              "dist/${{ steps.package.outputs.archive }}.sha256#SHA256 checksum" \
+              --title "Chinese Web to Obsidian ${GITHUB_REF_NAME}" \
+              --generate-notes \
+              --verify-tag
+          fi
