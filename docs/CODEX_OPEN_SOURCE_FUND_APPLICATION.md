@@ -1,5 +1,7 @@
 # Codex Open Source Fund 申请草稿
 
+> 当前目标是申请包含 6 个月 ChatGPT Pro 的 Codex for Open Source。请优先使用 [CODEX_FOR_OPEN_SOURCE_APPLICATION.md](CODEX_FOR_OPEN_SOURCE_APPLICATION.md)。本文件仅保留为普通 Open Source Fund 的参考草稿。
+
 这份文档是表单填写草稿，不代表项目已经获得 OpenAI 资助。提交前请补充申请人的真实资料，并根据表单当时的字段和字数限制调整。
 
 ## 项目名称
